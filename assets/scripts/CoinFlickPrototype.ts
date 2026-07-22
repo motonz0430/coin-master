@@ -27,6 +27,7 @@ import {
     resources,
     RigidBody,
     screen,
+    TextAsset,
     Texture2D,
     UITransform,
     utils,
@@ -34,6 +35,13 @@ import {
     VerticalTextAlignment,
     view,
 } from 'cc';
+import {
+    CHARGE_CURVE_RESOURCE_PATH,
+    createDefaultChargeCurve,
+    parseChargeCurveCsv,
+    sampleChargeCurve,
+} from './ChargeCurveTable';
+import type { ChargeCurvePoint } from './ChargeCurveTable';
 
 const { ccclass, property } = _decorator;
 
@@ -56,15 +64,6 @@ type GestureMode = 'none' | 'camera' | 'charge';
  */
 @ccclass('CoinFlickPrototype')
 export class CoinFlickPrototype extends Component {
-    @property({ tooltip: '达到最大力度所需的长按时间（秒）' })
-    public maxChargeSeconds = 2.2;
-
-    @property({ tooltip: '最小发射冲量' })
-    public minImpulse = 1.0;
-
-    @property({ tooltip: '最大发射冲量' })
-    public maxImpulse = 10.0;
-
     @property({ tooltip: '横向拖满整个屏幕时旋转的角度' })
     public cameraDragDegreesPerScreen = 72;
 
@@ -91,6 +90,8 @@ export class CoinFlickPrototype extends Component {
     private gestureMode: GestureMode = 'none';
     private isCharging = false;
     private chargeSeconds = 0;
+    private chargeCurvePoints: ChargeCurvePoint[] = createDefaultChargeCurve();
+    private maxChargeSeconds = this.chargeCurvePoints[this.chargeCurvePoints.length - 1].seconds;
     private materials = new Map<string, Material>();
     private obstacles: Node[] = [];
     private coinBodies: Array<{ node: Node; body: RigidBody; isFalling: boolean }> = [];
@@ -98,6 +99,7 @@ export class CoinFlickPrototype extends Component {
     protected start(): void {
         profiler.hideStats();
         PhysicsSystem.instance.gravity = new Vec3(0, -9.8, 0);
+        this.loadChargeCurveTable();
 
         this.ensureRecoveredVisuals();
         this.bindVisualScene();
@@ -595,10 +597,28 @@ export class CoinFlickPrototype extends Component {
     }
 
     private calculateChargeImpulse(chargeSeconds: number): number {
-        const safeChargeDuration = Math.max(this.maxChargeSeconds, 0.001);
-        const chargeRatio = Math.min(1, Math.max(0, chargeSeconds / safeChargeDuration));
-        const easedCharge = chargeRatio * chargeRatio * (3 - 2 * chargeRatio);
-        return this.minImpulse + (this.maxImpulse - this.minImpulse) * easedCharge;
+        return sampleChargeCurve(this.chargeCurvePoints, chargeSeconds);
+    }
+
+    private loadChargeCurveTable(): void {
+        resources.load(CHARGE_CURVE_RESOURCE_PATH, TextAsset, (error, table) => {
+            if (error) {
+                console.error(`[蓄力配表] 无法加载配表，继续使用内置安全曲线：${error.message}`);
+                return;
+            }
+
+            try {
+                const points = parseChargeCurveCsv(table.text);
+                this.chargeCurvePoints = points;
+                this.maxChargeSeconds = points[points.length - 1].seconds;
+                console.info(
+                    `[蓄力配表] 已加载 ${points.length} 个数值点，最大蓄力时间 ${this.maxChargeSeconds.toFixed(1)} 秒。`,
+                );
+            } catch (parseError) {
+                const message = parseError instanceof Error ? parseError.message : String(parseError);
+                console.error(`[蓄力配表] 配表校验失败，继续使用内置安全曲线：${message}`);
+            }
+        });
     }
 
     private updateCameraRig(): void {
