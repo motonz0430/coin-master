@@ -60,10 +60,10 @@ export class CoinFlickPrototype extends Component {
     public maxChargeSeconds = 2.2;
 
     @property({ tooltip: '最小发射冲量' })
-    public minImpulse = 1.8;
+    public minImpulse = 1.0;
 
     @property({ tooltip: '最大发射冲量' })
-    public maxImpulse = 7.5;
+    public maxImpulse = 10.0;
 
     @property({ tooltip: '横向拖满整个屏幕时旋转的角度' })
     public cameraDragDegreesPerScreen = 72;
@@ -585,15 +585,20 @@ export class CoinFlickPrototype extends Component {
     private launchPlayerCoin(): void {
         if (!this.playerCoin) return;
 
-        const chargeRatio = Math.min(1, this.chargeSeconds / this.maxChargeSeconds);
-        const easedCharge = chargeRatio * chargeRatio * (3 - 2 * chargeRatio);
-        const impulse = this.minImpulse + (this.maxImpulse - this.minImpulse) * easedCharge;
+        const impulse = this.calculateChargeImpulse(this.chargeSeconds);
         const direction = this.getLaunchDirection(new Vec3());
 
         this.playerCoin.getComponent(RigidBody)?.applyImpulse(direction.multiplyScalar(impulse));
         this.isCharging = false;
         this.chargeSeconds = 0;
         this.redrawChargeZone();
+    }
+
+    private calculateChargeImpulse(chargeSeconds: number): number {
+        const safeChargeDuration = Math.max(this.maxChargeSeconds, 0.001);
+        const chargeRatio = Math.min(1, Math.max(0, chargeSeconds / safeChargeDuration));
+        const easedCharge = chargeRatio * chargeRatio * (3 - 2 * chargeRatio);
+        return this.minImpulse + (this.maxImpulse - this.minImpulse) * easedCharge;
     }
 
     private updateCameraRig(): void {
