@@ -98,7 +98,10 @@ export class CoinFlickPrototype extends Component {
 
     protected start(): void {
         profiler.hideStats();
-        PhysicsSystem.instance.gravity = new Vec3(0, -9.8, 0);
+        const physicsSystem = PhysicsSystem.instance;
+        physicsSystem.fixedTimeStep = 1 / 120;
+        physicsSystem.maxSubSteps = 4;
+        physicsSystem.gravity = new Vec3(0, -9.8, 0);
         this.loadChargeCurveTable();
 
         this.ensureRecoveredVisuals();
@@ -232,10 +235,10 @@ export class CoinFlickPrototype extends Component {
         collider.height = 2;
         collider.material = this.createPhysicsMaterial(0.16, 0.72);
 
-        // High charge impulses can move a coin beyond another coin between two
-        // discrete physics frames. Bullet's sweep-based CCD prevents that
-        // tunnelling; it requires one convex collider centered on the body.
-        body.useCCD = true;
+        // Bullet uses a fixed 0.1-unit CCD swept sphere, which is thicker than
+        // this coin and can push it upward from the table. A 120 Hz fixed step
+        // with up to four substeps handles the current speed without that shape.
+        body.useCCD = false;
 
         this.coinBodies.push({ node: coin, body, isFalling: false });
     }
