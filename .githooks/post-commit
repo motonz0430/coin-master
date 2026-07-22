@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+backup_dir="/Users/Martin/Documents/coin-flick-game-backups"
+temporary_bundle="$backup_dir/.coin-flick-game-latest.bundle.tmp"
+latest_bundle="$backup_dir/coin-flick-game-latest.bundle"
+
+mkdir -p "$backup_dir"
+git -C "$repo_root" bundle create "$temporary_bundle" --all
+mv "$temporary_bundle" "$latest_bundle"
