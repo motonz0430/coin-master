@@ -1,0 +1,42 @@
+{
+  "__type__": "cc.Material",
+  "_name": "TableVisual",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "1baf0fc9-befa-459c-8bdd-af1a450a0319"
+  },
+  "_techIdx": 0,
+  "_defines": [
+    {
+      "USE_ALBEDO_MAP": true
+    }
+  ],
+  "_states": [
+    {
+      "blendState": {
+        "targets": [
+          {}
+        ]
+      },
+      "depthStencilState": {},
+      "rasterizerState": {}
+    }
+  ],
+  "_props": [
+    {
+      "mainColor": {
+        "__type__": "cc.Color",
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "mainTexture": {
+        "__uuid__": "8dfa79e6-d8dc-4064-bff0-7b95fc4c9b2e@6c48a"
+      },
+      "roughness": 0.72,
+      "metallic": 0.12
+    }
+  ]
+}

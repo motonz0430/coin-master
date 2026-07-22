@@ -1,0 +1,10 @@
+/library/
+/local/
+/temp/
+/build/
+/profiles/
+/native/
+/node_modules/
+/extensions/cocos-mcp-server/
+.DS_Store
+*.log
