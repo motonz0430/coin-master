@@ -227,9 +227,15 @@ export class CoinFlickPrototype extends Component {
         body.angularFactor = Vec3.ZERO;
 
         const collider = coin.getComponent(CylinderCollider) ?? coin.addComponent(CylinderCollider);
+        collider.center = Vec3.ZERO;
         collider.radius = 0.5;
         collider.height = 2;
         collider.material = this.createPhysicsMaterial(0.16, 0.72);
+
+        // High charge impulses can move a coin beyond another coin between two
+        // discrete physics frames. Bullet's sweep-based CCD prevents that
+        // tunnelling; it requires one convex collider centered on the body.
+        body.useCCD = true;
 
         this.coinBodies.push({ node: coin, body, isFalling: false });
     }
@@ -589,8 +595,10 @@ export class CoinFlickPrototype extends Component {
 
         const impulse = this.calculateChargeImpulse(this.chargeSeconds);
         const direction = this.getLaunchDirection(new Vec3());
+        const body = this.playerCoin.getComponent(RigidBody);
 
-        this.playerCoin.getComponent(RigidBody)?.applyImpulse(direction.multiplyScalar(impulse));
+        body?.wakeUp();
+        body?.applyImpulse(direction.multiplyScalar(impulse));
         this.isCharging = false;
         this.chargeSeconds = 0;
         this.redrawChargeZone();
