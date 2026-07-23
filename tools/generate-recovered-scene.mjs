@@ -17,6 +17,10 @@ const UUID = {
 };
 
 const scene = [];
+const WORLD_SCALE = 5;
+const world = (values) => values.map((value) => (
+  Math.round(value * WORLD_SCALE * 1_000_000) / 1_000_000
+));
 const vec3 = ([x, y, z]) => ({ __type__: 'cc.Vec3', x, y, z });
 const quat = ([x, y, z, w]) => ({ __type__: 'cc.Quat', x, y, z, w });
 const color = (r, g, b, a = 255) => ({ __type__: 'cc.Color', r, g, b, a });
@@ -72,7 +76,7 @@ const addMeshRenderer = (nodeId, meshUuid, materialUuid, { cast = true, receive 
     _shadowCastingMode: cast ? 1 : 0,
     _shadowReceivingMode: receive ? 1 : 0,
     _shadowBias: 0.00015,
-    _shadowNormalBias: 0.006,
+    _shadowNormalBias: 0.006 * WORLD_SCALE,
     _id: `${scene[nodeId]._id}Renderer`,
   });
   scene[nodeId]._components.push({ __id__: componentId });
@@ -200,9 +204,6 @@ const scriptId = add({
   node: { __id__: gameRootId },
   _enabled: true,
   __prefab: null,
-  maxChargeSeconds: 2.2,
-  minImpulse: 1.8,
-  maxImpulse: 7.5,
   cameraDragDegreesPerScreen: 72,
   chargeZoneHeightRatio: 0.19,
   minObstacleCount: 3,
@@ -214,8 +215,8 @@ scene[gameRootId]._components.push({ __id__: scriptId });
 const tableId = addNode({
   name: 'Table',
   parent: gameRootId,
-  position: [0, -0.18, 0],
-  scale: [11.44, 0.18, 11.44],
+  position: world([0, -0.18, 0]),
+  scale: world([11.44, 0.18, 11.44]),
   id: 'TableRecoveredNode',
 });
 addMeshRenderer(tableId, UUID.cylinderMesh, UUID.tableMaterial, { cast: false, receive: true });
@@ -229,8 +230,8 @@ addMeshRenderer(tableId, UUID.cylinderMesh, UUID.tableMaterial, { cast: false, r
   const coinId = addNode({
     name,
     parent: gameRootId,
-    position,
-    scale: [0.672, 0.024, 0.672],
+    position: world(position),
+    scale: world([0.672, 0.024, 0.672]),
     id: `${name.replace(/[^A-Za-z0-9]/g, '')}RecoveredNode`,
   });
   addMeshRenderer(coinId, UUID.cylinderMesh, UUID.coinEdgeMaterial, { cast: true, receive: true });
@@ -240,7 +241,7 @@ addMeshRenderer(tableId, UUID.cylinderMesh, UUID.tableMaterial, { cast: false, r
 const cameraId = addNode({
   name: 'MainCamera',
   parent: gameRootId,
-  position: [0, 8.4, 10.05],
+  position: world([0, 8.4, 10.05]),
   rotation: [-0.341, 0, 0, 0.9401],
   euler: [-39.9, 0, 0],
   id: 'MainCameraRecoveredNode',
@@ -258,8 +259,8 @@ const cameraComponentId = add({
   _fov: 42,
   _fovAxis: 0,
   _orthoHeight: 10,
-  _near: 0.1,
-  _far: 100,
+  _near: 0.1 * WORLD_SCALE,
+  _far: 100 * WORLD_SCALE,
   _color: color(25, 31, 38),
   _depth: 1,
   _stencil: 0,
@@ -278,7 +279,7 @@ scene[cameraId]._components.push({ __id__: cameraComponentId });
 const lightId = addNode({
   name: 'KeyLight',
   parent: gameRootId,
-  position: [0, 8, 0],
+  position: world([0, 8, 0]),
   rotation: [-0.388, -0.275, -0.122, 0.871],
   euler: [-48, -35, 0],
   id: 'KeyLightRecoveredNode',
@@ -306,12 +307,12 @@ const lightComponentId = add({
   _shadowEnabled: true,
   _shadowPcf: 2,
   _shadowBias: 0.0008,
-  _shadowNormalBias: 0.018,
+  _shadowNormalBias: 0.018 * WORLD_SCALE,
   _shadowSaturation: 0.9,
   _shadowFixedArea: true,
-  _shadowNear: 0.1,
-  _shadowFar: 20,
-  _shadowOrthoSize: 7.2,
+  _shadowNear: 0.1 * WORLD_SCALE,
+  _shadowFar: 20 * WORLD_SCALE,
+  _shadowOrthoSize: 7.2 * WORLD_SCALE,
   _id: 'KeyLightVisualComponent',
 });
 scene[lightId]._components.push({ __id__: lightComponentId });
@@ -330,8 +331,8 @@ scene[lightId]._components.push({ __id__: lightComponentId });
   const obstacleId = addNode({
     name: `Obstacle_${index}`,
     parent: gameRootId,
-    position,
-    scale: [0.56, 0.38, 0.56],
+    position: world(position),
+    scale: world([0.56, 0.38, 0.56]),
     id: `Obstacle${index}RecoveredNode`,
   });
   addDragonVisual(obstacleId, index);
@@ -353,12 +354,12 @@ const shadowsId = add({
   _autoAdapt: true,
   _pcf: 2,
   _bias: 0.000001,
-  _near: 0.1,
-  _far: 50,
+  _near: 0.1 * WORLD_SCALE,
+  _far: 50 * WORLD_SCALE,
   _aspect: 1,
-  _shadowDistance: 10,
-  _invisibleOcclusionRange: 200,
-  _orthoSize: 10,
+  _shadowDistance: 10 * WORLD_SCALE,
+  _invisibleOcclusionRange: 200 * WORLD_SCALE,
+  _orthoSize: 10 * WORLD_SCALE,
   _maxReceived: 4,
   _size: { __type__: 'cc.Vec2', x: 1024, y: 1024 },
 });

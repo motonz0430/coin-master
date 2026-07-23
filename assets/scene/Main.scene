@@ -182,7 +182,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": -0.18,
+      "y": -0.9,
       "z": 0
     },
     "_lrot": {
@@ -194,9 +194,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 11.44,
-      "y": 0.18,
-      "z": 11.44
+      "x": 57.2,
+      "y": 0.9,
+      "z": 57.2
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -231,7 +231,7 @@
     "_shadowCastingMode": 0,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "TableRecoveredNodeRenderer"
   },
   {
@@ -257,8 +257,8 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 0.04,
-      "z": 3.85
+      "y": 0.2,
+      "z": 19.25
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -269,9 +269,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.672,
-      "y": 0.024,
-      "z": 0.672
+      "x": 3.36,
+      "y": 0.12,
+      "z": 3.36
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -306,7 +306,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinPlayerRecoveredNodeRenderer"
   },
   {
@@ -377,7 +377,7 @@
     "_shadowCastingMode": 0,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinPlayerRecoveredNodeFaceRenderer"
   },
   {
@@ -403,8 +403,8 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 0.04,
-      "z": 1.65
+      "y": 0.2,
+      "z": 8.25
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -415,9 +415,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.672,
-      "y": 0.024,
-      "z": 0.672
+      "x": 3.36,
+      "y": 0.12,
+      "z": 3.36
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -452,7 +452,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget1RecoveredNodeRenderer"
   },
   {
@@ -523,7 +523,7 @@
     "_shadowCastingMode": 0,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget1RecoveredNodeFaceRenderer"
   },
   {
@@ -548,9 +548,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -1.1,
-      "y": 0.04,
-      "z": -0.45
+      "x": -5.5,
+      "y": 0.2,
+      "z": -2.25
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -561,9 +561,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.672,
-      "y": 0.024,
-      "z": 0.672
+      "x": 3.36,
+      "y": 0.12,
+      "z": 3.36
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -598,7 +598,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget2RecoveredNodeRenderer"
   },
   {
@@ -669,7 +669,7 @@
     "_shadowCastingMode": 0,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget2RecoveredNodeFaceRenderer"
   },
   {
@@ -694,9 +694,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 1.05,
-      "y": 0.04,
-      "z": -2.4
+      "x": 5.25,
+      "y": 0.2,
+      "z": -12
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -707,9 +707,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.672,
-      "y": 0.024,
-      "z": 0.672
+      "x": 3.36,
+      "y": 0.12,
+      "z": 3.36
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -744,7 +744,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget3RecoveredNodeRenderer"
   },
   {
@@ -815,7 +815,7 @@
     "_shadowCastingMode": 0,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "CoinTarget3RecoveredNodeFaceRenderer"
   },
   {
@@ -837,8 +837,8 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 8.4,
-      "z": 10.05
+      "y": 42,
+      "z": 50.25
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -878,8 +878,8 @@
     "_fov": 42,
     "_fovAxis": 0,
     "_orthoHeight": 10,
-    "_near": 0.1,
-    "_far": 100,
+    "_near": 0.5,
+    "_far": 500,
     "_color": {
       "__type__": "cc.Color",
       "r": 25,
@@ -924,7 +924,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 8,
+      "y": 40,
       "z": 0
     },
     "_lrot": {
@@ -983,12 +983,12 @@
     "_shadowEnabled": true,
     "_shadowPcf": 2,
     "_shadowBias": 0.0008,
-    "_shadowNormalBias": 0.018,
+    "_shadowNormalBias": 0.09,
     "_shadowSaturation": 0.9,
     "_shadowFixedArea": true,
-    "_shadowNear": 0.1,
-    "_shadowFar": 20,
-    "_shadowOrthoSize": 7.2,
+    "_shadowNear": 0.5,
+    "_shadowFar": 100,
+    "_shadowOrthoSize": 36,
     "_id": "KeyLightVisualComponent"
   },
   {
@@ -1009,9 +1009,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -1.8,
-      "y": 0.38,
-      "z": 2
+      "x": -9,
+      "y": 1.9,
+      "z": 10
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -1022,9 +1022,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -1164,7 +1164,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1DragonScaleRenderer"
   },
   {
@@ -1235,7 +1235,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1EyeGlowRenderer"
   },
   {
@@ -1306,7 +1306,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1HornClawRenderer"
   },
   {
@@ -1377,7 +1377,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1MouthRenderer"
   },
   {
@@ -1448,7 +1448,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1StoneRenderer"
   },
   {
@@ -1519,7 +1519,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon1StoneEdgeRenderer"
   },
   {
@@ -1540,9 +1540,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 1.7,
-      "y": 0.38,
-      "z": 1.7
+      "x": 8.5,
+      "y": 1.9,
+      "z": 8.5
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -1553,9 +1553,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -1695,7 +1695,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2DragonScaleRenderer"
   },
   {
@@ -1766,7 +1766,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2EyeGlowRenderer"
   },
   {
@@ -1837,7 +1837,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2HornClawRenderer"
   },
   {
@@ -1908,7 +1908,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2MouthRenderer"
   },
   {
@@ -1979,7 +1979,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2StoneRenderer"
   },
   {
@@ -2050,7 +2050,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon2StoneEdgeRenderer"
   },
   {
@@ -2071,9 +2071,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -2.2,
-      "y": 0.38,
-      "z": 0.2
+      "x": -11,
+      "y": 1.9,
+      "z": 1
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -2084,9 +2084,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -2226,7 +2226,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3DragonScaleRenderer"
   },
   {
@@ -2297,7 +2297,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3EyeGlowRenderer"
   },
   {
@@ -2368,7 +2368,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3HornClawRenderer"
   },
   {
@@ -2439,7 +2439,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3MouthRenderer"
   },
   {
@@ -2510,7 +2510,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3StoneRenderer"
   },
   {
@@ -2581,7 +2581,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon3StoneEdgeRenderer"
   },
   {
@@ -2602,9 +2602,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 1.9,
-      "y": 0.38,
-      "z": -0.3
+      "x": 9.5,
+      "y": 1.9,
+      "z": -1.5
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -2615,9 +2615,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -2757,7 +2757,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4DragonScaleRenderer"
   },
   {
@@ -2828,7 +2828,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4EyeGlowRenderer"
   },
   {
@@ -2899,7 +2899,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4HornClawRenderer"
   },
   {
@@ -2970,7 +2970,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4MouthRenderer"
   },
   {
@@ -3041,7 +3041,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4StoneRenderer"
   },
   {
@@ -3112,7 +3112,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon4StoneEdgeRenderer"
   },
   {
@@ -3133,9 +3133,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": -1.4,
-      "y": 0.38,
-      "z": -1.8
+      "x": -7,
+      "y": 1.9,
+      "z": -9
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -3146,9 +3146,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -3288,7 +3288,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5DragonScaleRenderer"
   },
   {
@@ -3359,7 +3359,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5EyeGlowRenderer"
   },
   {
@@ -3430,7 +3430,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5HornClawRenderer"
   },
   {
@@ -3501,7 +3501,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5MouthRenderer"
   },
   {
@@ -3572,7 +3572,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5StoneRenderer"
   },
   {
@@ -3643,7 +3643,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon5StoneEdgeRenderer"
   },
   {
@@ -3664,9 +3664,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 0.4,
-      "y": 0.38,
-      "z": -2.5
+      "x": 2,
+      "y": 1.9,
+      "z": -12.5
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -3677,9 +3677,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -3819,7 +3819,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6DragonScaleRenderer"
   },
   {
@@ -3890,7 +3890,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6EyeGlowRenderer"
   },
   {
@@ -3961,7 +3961,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6HornClawRenderer"
   },
   {
@@ -4032,7 +4032,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6MouthRenderer"
   },
   {
@@ -4103,7 +4103,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6StoneRenderer"
   },
   {
@@ -4174,7 +4174,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon6StoneEdgeRenderer"
   },
   {
@@ -4195,9 +4195,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 2.6,
-      "y": 0.38,
-      "z": -1.8
+      "x": 13,
+      "y": 1.9,
+      "z": -9
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -4208,9 +4208,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -4350,7 +4350,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7DragonScaleRenderer"
   },
   {
@@ -4421,7 +4421,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7EyeGlowRenderer"
   },
   {
@@ -4492,7 +4492,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7HornClawRenderer"
   },
   {
@@ -4563,7 +4563,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7MouthRenderer"
   },
   {
@@ -4634,7 +4634,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7StoneRenderer"
   },
   {
@@ -4705,7 +4705,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon7StoneEdgeRenderer"
   },
   {
@@ -4726,9 +4726,9 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 0.2,
-      "y": 0.38,
-      "z": 0.1
+      "x": 1,
+      "y": 1.9,
+      "z": 0.5
     },
     "_lrot": {
       "__type__": "cc.Quat",
@@ -4739,9 +4739,9 @@
     },
     "_lscale": {
       "__type__": "cc.Vec3",
-      "x": 0.56,
-      "y": 0.38,
-      "z": 0.56
+      "x": 2.8,
+      "y": 1.9,
+      "z": 2.8
     },
     "_mobility": 0,
     "_layer": 1073741824,
@@ -4881,7 +4881,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8DragonScaleRenderer"
   },
   {
@@ -4952,7 +4952,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8EyeGlowRenderer"
   },
   {
@@ -5023,7 +5023,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8HornClawRenderer"
   },
   {
@@ -5094,7 +5094,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8MouthRenderer"
   },
   {
@@ -5165,7 +5165,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8StoneRenderer"
   },
   {
@@ -5236,7 +5236,7 @@
     "_shadowCastingMode": 1,
     "_shadowReceivingMode": 1,
     "_shadowBias": 0.00015,
-    "_shadowNormalBias": 0.006,
+    "_shadowNormalBias": 0.03,
     "_id": "Dragon8StoneEdgeRenderer"
   },
   {
@@ -5278,12 +5278,12 @@
     "_autoAdapt": true,
     "_pcf": 2,
     "_bias": 0.000001,
-    "_near": 0.1,
-    "_far": 50,
+    "_near": 0.5,
+    "_far": 250,
     "_aspect": 1,
-    "_shadowDistance": 10,
-    "_invisibleOcclusionRange": 200,
-    "_orthoSize": 10,
+    "_shadowDistance": 50,
+    "_invisibleOcclusionRange": 1000,
+    "_orthoSize": 50,
     "_maxReceived": 4,
     "_size": {
       "__type__": "cc.Vec2",

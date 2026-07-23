@@ -49,6 +49,7 @@ const { ccclass, property } = _decorator;
 // Their serialized values are stable: ShadowMap = 1, SOFT_2X = 2.
 const SHADOW_TYPE_MAP = 1;
 const SHADOW_PCF_SOFT_2X = 2;
+const WORLD_SCALE = 5;
 
 type GestureMode = 'none' | 'camera' | 'charge';
 
@@ -76,9 +77,9 @@ export class CoinFlickPrototype extends Component {
     @property({ tooltip: '每局最多出现的圆柱障碍物数量' })
     public maxObstacleCount = 7;
 
-    private readonly coinRadius = 0.336;
-    private readonly coinHeight = 0.048;
-    private readonly tableRadius = 5.72;
+    private readonly coinRadius = 0.336 * WORLD_SCALE;
+    private readonly coinHeight = 0.048 * WORLD_SCALE;
+    private readonly tableRadius = 5.72 * WORLD_SCALE;
 
     private camera: Camera | null = null;
     private playerCoin: Node | null = null;
@@ -101,7 +102,10 @@ export class CoinFlickPrototype extends Component {
         const physicsSystem = PhysicsSystem.instance;
         physicsSystem.fixedTimeStep = 1 / 120;
         physicsSystem.maxSubSteps = 4;
-        physicsSystem.gravity = new Vec3(0, -9.8, 0);
+        // Keep motion timing visually identical after enlarging every gameplay
+        // distance. Gravity, launch velocity and velocity thresholds must scale
+        // with the world; dimensionless material and damping values stay intact.
+        physicsSystem.gravity = new Vec3(0, -9.8 * WORLD_SCALE, 0);
         this.loadChargeCurveTable();
 
         this.ensureRecoveredVisuals();
@@ -144,13 +148,13 @@ export class CoinFlickPrototype extends Component {
         const camera = cameraNode.getComponent(Camera) ?? cameraNode.addComponent(Camera);
         camera.projection = Camera.ProjectionType.PERSPECTIVE;
         camera.fov = 42;
-        camera.near = 0.1;
-        camera.far = 100;
+        camera.near = 0.1 * WORLD_SCALE;
+        camera.far = 100 * WORLD_SCALE;
         camera.clearColor = new Color(25, 31, 38, 255);
         this.camera = camera;
 
         const lightNode = this.requireSceneNode('KeyLight');
-        lightNode.setPosition(0, 8, 0);
+        lightNode.setPosition(0, 8 * WORLD_SCALE, 0);
         lightNode.setRotationFromEuler(-48, -35, 0);
         const light = lightNode.getComponent(DirectionalLight) ?? lightNode.addComponent(DirectionalLight);
         light.color = new Color(255, 226, 190, 255);
@@ -158,12 +162,12 @@ export class CoinFlickPrototype extends Component {
         light.shadowEnabled = true;
         light.shadowPcf = SHADOW_PCF_SOFT_2X;
         light.shadowBias = 0.0008;
-        light.shadowNormalBias = 0.018;
+        light.shadowNormalBias = 0.018 * WORLD_SCALE;
         light.shadowSaturation = 0.9;
         light.shadowFixedArea = true;
-        light.shadowNear = 0.1;
-        light.shadowFar = 20;
-        light.shadowOrthoSize = 7.2;
+        light.shadowNear = 0.1 * WORLD_SCALE;
+        light.shadowFar = 20 * WORLD_SCALE;
+        light.shadowOrthoSize = 7.2 * WORLD_SCALE;
 
         this.playerCoin = this.requireSceneNode('Coin_Player');
     }
@@ -260,10 +264,11 @@ export class CoinFlickPrototype extends Component {
             const velocity = new Vec3();
             coin.body.getLinearVelocity(velocity);
             const horizontalSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-            const inverseSpeed = horizontalSpeed > 0.1 ? 1 / horizontalSpeed : 0;
-            const tiltX = horizontalSpeed > 0.1 ? velocity.z * inverseSpeed : 0.82;
-            const tiltZ = horizontalSpeed > 0.1 ? -velocity.x * inverseSpeed : 0.57;
-            const flipSpeed = 4.5 + Math.min(3, horizontalSpeed * 0.5);
+            const minimumFallSpeed = 0.1 * WORLD_SCALE;
+            const inverseSpeed = horizontalSpeed > minimumFallSpeed ? 1 / horizontalSpeed : 0;
+            const tiltX = horizontalSpeed > minimumFallSpeed ? velocity.z * inverseSpeed : 0.82;
+            const tiltZ = horizontalSpeed > minimumFallSpeed ? -velocity.x * inverseSpeed : 0.57;
+            const flipSpeed = 4.5 + Math.min(3, horizontalSpeed * 0.5 / WORLD_SCALE);
 
             coin.body.setAngularVelocity(new Vec3(
                 tiltX * flipSpeed,
@@ -289,7 +294,7 @@ export class CoinFlickPrototype extends Component {
             'Coin_Target_3',
         ].map((name) => {
             const position = this.requireSceneNode(name).position;
-            return { x: position.x, z: position.z, clearance: this.coinRadius + 0.52 };
+            return { x: position.x, z: position.z, clearance: this.coinRadius + 0.52 * WORLD_SCALE };
         });
 
         this.obstacles.forEach((obstacle, index) => {
@@ -297,8 +302,8 @@ export class CoinFlickPrototype extends Component {
             obstacle.active = isActive;
             if (!isActive) return;
 
-            const radius = this.randomRange(0.24, 0.34);
-            const height = this.randomRange(0.58, 0.92);
+            const radius = this.randomRange(0.24, 0.34) * WORLD_SCALE;
+            const height = this.randomRange(0.58, 0.92) * WORLD_SCALE;
             const position = this.findObstaclePosition(radius, occupied);
             obstacle.setPosition(position.x, height * 0.5, position.z);
             obstacle.setScale(radius * 2, height * 0.5, radius * 2);
@@ -315,7 +320,7 @@ export class CoinFlickPrototype extends Component {
             collider.height = 2;
             collider.material = this.createPhysicsMaterial(0.2, 0.78);
 
-            occupied.push({ x: position.x, z: position.z, clearance: radius + 0.42 });
+            occupied.push({ x: position.x, z: position.z, clearance: radius + 0.42 * WORLD_SCALE });
         });
     }
 
@@ -323,7 +328,7 @@ export class CoinFlickPrototype extends Component {
         radius: number,
         occupied: Array<{ x: number; z: number; clearance: number }>,
     ): { x: number; z: number } {
-        const usableRadius = this.tableRadius - radius - 0.48;
+        const usableRadius = this.tableRadius - radius - 0.48 * WORLD_SCALE;
         for (let attempt = 0; attempt < 80; attempt++) {
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.sqrt(Math.random()) * usableRadius;
@@ -475,7 +480,7 @@ export class CoinFlickPrototype extends Component {
             renderer.shadowCastingModeForInspector = castShadow;
             renderer.receiveShadowForInspector = receiveShadow;
             renderer.shadowBias = 0.00015;
-            renderer.shadowNormalBias = 0.006;
+            renderer.shadowNormalBias = 0.006 * WORLD_SCALE;
         });
     }
 
@@ -596,7 +601,9 @@ export class CoinFlickPrototype extends Component {
     private launchPlayerCoin(): void {
         if (!this.playerCoin) return;
 
-        const impulse = this.calculateChargeImpulse(this.chargeSeconds);
+        // The designer table remains in readable logical values (1–10). Scaling
+        // only the applied impulse preserves the original motion time and framing.
+        const impulse = this.calculateChargeImpulse(this.chargeSeconds) * WORLD_SCALE;
         const direction = this.getLaunchDirection(new Vec3());
         const body = this.playerCoin.getComponent(RigidBody);
 
@@ -638,11 +645,11 @@ export class CoinFlickPrototype extends Component {
         const forward = this.getLaunchDirection(new Vec3());
         const playerPosition = this.playerCoin.worldPosition;
         const cameraPosition = playerPosition.clone()
-            .subtract(forward.clone().multiplyScalar(6.2))
-            .add3f(0, 8.4, 0);
+            .subtract(forward.clone().multiplyScalar(6.2 * WORLD_SCALE))
+            .add3f(0, 8.4 * WORLD_SCALE, 0);
         const lookTarget = playerPosition.clone()
-            .add(forward.clone().multiplyScalar(2.65))
-            .add3f(0, 0.05, 0);
+            .add(forward.clone().multiplyScalar(2.65 * WORLD_SCALE))
+            .add3f(0, 0.05 * WORLD_SCALE, 0);
 
         this.camera.node.setWorldPosition(cameraPosition);
         this.camera.node.lookAt(lookTarget, Vec3.UP);
@@ -710,7 +717,7 @@ export class CoinFlickPrototype extends Component {
     private isBodyNearlyStopped(body: RigidBody): boolean {
         const velocity = new Vec3();
         body.getLinearVelocity(velocity);
-        return velocity.lengthSqr() < 0.05;
+        return velocity.lengthSqr() < 0.05 * WORLD_SCALE * WORLD_SCALE;
     }
 
     private getMaterial(
