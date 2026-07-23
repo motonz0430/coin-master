@@ -69,6 +69,7 @@ const WORLD_SCALE = 5;
 const SHOT_MINIMUM_SECONDS = 0.12;
 const TARGET_SETTLE_SECONDS = 0.3;
 const TARGET_SETTLE_SPEED = 0.08 * WORLD_SCALE;
+const COIN_FALL_PRESENTATION_SECONDS = 0.48;
 
 type GestureMode = 'none' | 'camera' | 'charge';
 
@@ -81,6 +82,13 @@ interface CampaignTargetRuntime {
     settledElapsed: number;
     resolved: boolean;
     resolution: CampaignTargetResolution | null;
+}
+
+interface CoinBodyRuntime {
+    readonly node: Node;
+    readonly body: RigidBody;
+    isFalling: boolean;
+    fallElapsed: number;
 }
 
 /**
@@ -139,7 +147,7 @@ export class CoinFlickPrototype extends Component {
     private maxChargeSeconds = this.chargeCurvePoints[this.chargeCurvePoints.length - 1].seconds;
     private materials = new Map<string, Material>();
     private obstacles: Node[] = [];
-    private coinBodies: Array<{ node: Node; body: RigidBody; isFalling: boolean }> = [];
+    private coinBodies: CoinBodyRuntime[] = [];
     private campaignSession: CampaignSession | null = null;
     private campaignTargets: CampaignTargetRuntime[] = [];
     private campaignPlayerCollider: CylinderCollider | null = null;
@@ -184,7 +192,7 @@ export class CoinFlickPrototype extends Component {
     }
 
     protected lateUpdate(deltaTime: number): void {
-        this.updateCoinFallRotation();
+        this.updateCoinFallRotation(deltaTime);
         this.updateCampaignRules(deltaTime);
         this.updateCameraRig();
     }
@@ -304,7 +312,12 @@ export class CoinFlickPrototype extends Component {
         // Keep 120 Hz stepping as an independent safety layer for fast impacts.
         body.useCCD = true;
 
-        this.coinBodies.push({ node: coin, body, isFalling: false });
+        this.coinBodies.push({
+            node: coin,
+            body,
+            isFalling: false,
+            fallElapsed: 0,
+        });
     }
 
     private configureObstaclePhysics(obstacle: Node): void {
@@ -319,13 +332,17 @@ export class CoinFlickPrototype extends Component {
         collider.material = this.createPhysicsMaterial(0.2, 0.78);
     }
 
-    private updateCoinFallRotation(): void {
+    private updateCoinFallRotation(deltaTime: number): void {
         for (const coin of this.coinBodies) {
-            if (coin.isFalling) continue;
+            if (coin.isFalling) {
+                coin.fallElapsed += deltaTime;
+                continue;
+            }
 
-            if (!this.isCoinFallingOffTable(coin.node)) continue;
+            if (!this.hasCoinLeftTable(coin.node)) continue;
 
             coin.isFalling = true;
+            coin.fallElapsed = 0;
             coin.body.angularFactor = Vec3.ONE;
             coin.body.wakeUp();
 
@@ -818,7 +835,7 @@ export class CoinFlickPrototype extends Component {
             if (target.resolved || !session.isTargetHit(target.id)) return;
 
             target.hitElapsed += deltaTime;
-            if (this.isCoinFallingOffTable(target.node)) {
+            if (this.isCoinFallPresentationComplete(target.node)) {
                 this.resolveCampaignTarget(target, 'fell');
                 return;
             }
@@ -840,7 +857,7 @@ export class CoinFlickPrototype extends Component {
         const playerBody = this.playerCoin.getComponent(RigidBody);
         if (!playerBody) return;
 
-        const playerFell = this.isCoinFallingOffTable(this.playerCoin);
+        const playerFell = this.isCoinFallPresentationComplete(this.playerCoin);
         const playerStopped = this.campaignShotElapsed >= SHOT_MINIMUM_SECONDS
             && this.isBodyNearlyStopped(playerBody);
         if ((!playerFell && !playerStopped) || session.hasPendingHitTargets()) return;
@@ -919,7 +936,10 @@ export class CoinFlickPrototype extends Component {
         this.playerCoin.setRotation(Quat.IDENTITY);
         this.campaignPlayerSafePosition.set(this.playerCoin.position);
         const trackedCoin = this.coinBodies.find((coin) => coin.node === this.playerCoin);
-        if (trackedCoin) trackedCoin.isFalling = false;
+        if (trackedCoin) {
+            trackedCoin.isFalling = false;
+            trackedCoin.fallElapsed = 0;
+        }
 
         this.campaignPlayerCollider = target.collider;
         target.collider.on('onCollisionEnter', this.onCampaignPlayerCollisionEnter, this);
@@ -949,16 +969,25 @@ export class CoinFlickPrototype extends Component {
         this.playerCoin.setPosition(this.campaignPlayerSafePosition);
         this.playerCoin.setRotation(Quat.IDENTITY);
         const trackedCoin = this.coinBodies.find((coin) => coin.node === this.playerCoin);
-        if (trackedCoin) trackedCoin.isFalling = false;
+        if (trackedCoin) {
+            trackedCoin.isFalling = false;
+            trackedCoin.fallElapsed = 0;
+        }
         body.wakeUp();
     }
 
-    private isCoinFallingOffTable(coin: Node): boolean {
+    private hasCoinLeftTable(coin: Node): boolean {
         const position = coin.worldPosition;
         const radialDistance = Math.sqrt(position.x * position.x + position.z * position.z);
         const isPastEdge = radialDistance > this.tableRadius - this.coinRadius * 0.35;
         const isDropping = position.y < this.coinHeight * 0.7;
         return isPastEdge && isDropping;
+    }
+
+    private isCoinFallPresentationComplete(coin: Node): boolean {
+        const trackedCoin = this.coinBodies.find((item) => item.node === coin);
+        return trackedCoin?.isFalling === true
+            && trackedCoin.fallElapsed >= COIN_FALL_PRESENTATION_SECONDS;
     }
 
     private onCampaignLivesChanged(
