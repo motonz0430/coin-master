@@ -22,6 +22,7 @@ import {
     PhysicsMaterial,
     PhysicsSystem,
     profiler,
+    Quat,
     resources,
     RigidBody,
     screen,
@@ -32,6 +33,7 @@ import {
     VerticalTextAlignment,
     view,
 } from 'cc';
+import type { ICollisionEvent } from 'cc';
 import {
     CHARGE_CURVE_RESOURCE_PATH,
     createDefaultChargeCurve,
@@ -43,6 +45,18 @@ import { buildGameplay, loadGameplayDefinition } from './gameplay/GameplayBuilde
 import type { CameraDefinition, GameplayDefinition } from './gameplay/GameplayConfig';
 import { PrefabAssetLibrary } from './gameplay/PrefabAssetLibrary';
 import { GameMode, resolveGameplayContent } from './modes/GameMode';
+import {
+    loadCampaignLevelDefinition,
+} from './modes/campaign/CampaignLevelConfig';
+import type { CampaignLevelDefinition } from './modes/campaign/CampaignLevelConfig';
+import {
+    CampaignSession,
+} from './modes/campaign/CampaignSession';
+import type {
+    CampaignLifeLossReason,
+    CampaignOutcome,
+    CampaignTargetResolution,
+} from './modes/campaign/CampaignSession';
 
 const { ccclass, property } = _decorator;
 
@@ -51,8 +65,20 @@ const { ccclass, property } = _decorator;
 const SHADOW_TYPE_MAP = 1;
 const SHADOW_PCF_SOFT_2X = 2;
 const WORLD_SCALE = 5;
+const SHOT_MINIMUM_SECONDS = 0.12;
+const TARGET_SETTLE_SECONDS = 0.3;
+const TARGET_SETTLE_SPEED = 0.08 * WORLD_SCALE;
 
 type GestureMode = 'none' | 'camera' | 'charge';
+
+interface CampaignTargetRuntime {
+    readonly id: string;
+    readonly node: Node;
+    readonly body: RigidBody;
+    hitElapsed: number;
+    settledElapsed: number;
+    resolved: boolean;
+}
 
 /**
  * 《羊蹄山之魂》式弹钱币操作原型。
@@ -109,6 +135,11 @@ export class CoinFlickPrototype extends Component {
     private materials = new Map<string, Material>();
     private obstacles: Node[] = [];
     private coinBodies: Array<{ node: Node; body: RigidBody; isFalling: boolean }> = [];
+    private campaignSession: CampaignSession | null = null;
+    private campaignTargets: CampaignTargetRuntime[] = [];
+    private campaignPlayerCollider: CylinderCollider | null = null;
+    private campaignShotElapsed = 0;
+    private readonly campaignPlayerSpawn = new Vec3();
 
     protected start(): void {
         profiler.hideStats();
@@ -133,6 +164,7 @@ export class CoinFlickPrototype extends Component {
     }
 
     protected onDestroy(): void {
+        this.teardownCampaignRules();
         input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
         input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
@@ -146,8 +178,9 @@ export class CoinFlickPrototype extends Component {
         this.redrawChargeZone();
     }
 
-    protected lateUpdate(): void {
+    protected lateUpdate(deltaTime: number): void {
         this.updateCoinFallRotation();
+        this.updateCampaignRules(deltaTime);
         this.updateCameraRig();
     }
 
@@ -185,8 +218,11 @@ export class CoinFlickPrototype extends Component {
                 this.sandboxSetupResourcePath,
                 this.campaignLevelResourcePath,
             );
+            const definitionRequest = request.mode === GameMode.CAMPAIGN
+                ? loadCampaignLevelDefinition(request.resourcePath)
+                : loadGameplayDefinition(request.resourcePath, request.contentType);
             const [definition, library] = await Promise.all([
-                loadGameplayDefinition(request.resourcePath, request.contentType),
+                definitionRequest,
                 PrefabAssetLibrary.create(),
             ]);
             const builtGameplay = await buildGameplay(this.node, definition, library);
@@ -198,6 +234,14 @@ export class CoinFlickPrototype extends Component {
             this.configureScenePhysics(builtGameplay.targetCoins);
             this.applySceneMaterials(builtGameplay.targetCoins);
             this.configureLightingAndShadows(builtGameplay.targetCoins);
+            if (request.mode === GameMode.CAMPAIGN) {
+                this.configureCampaignRules(
+                    definition as CampaignLevelDefinition,
+                    builtGameplay.targetCoins,
+                );
+            } else {
+                this.teardownCampaignRules();
+            }
             this.updateCameraRig();
             console.info(
                 `[${request.modeName}] 已从 Prefab 资产库载入 ${definition.id}：${definition.displayName}`,
@@ -274,11 +318,7 @@ export class CoinFlickPrototype extends Component {
         for (const coin of this.coinBodies) {
             if (coin.isFalling) continue;
 
-            const position = coin.node.worldPosition;
-            const radialDistance = Math.sqrt(position.x * position.x + position.z * position.z);
-            const isPastEdge = radialDistance > this.tableRadius - this.coinRadius * 0.35;
-            const isDropping = position.y < this.coinHeight * 0.7;
-            if (!isPastEdge || !isDropping) continue;
+            if (!this.isCoinFallingOffTable(coin.node)) continue;
 
             coin.isFalling = true;
             coin.body.angularFactor = Vec3.ONE;
@@ -443,6 +483,7 @@ export class CoinFlickPrototype extends Component {
             if (!this.playerCoin) return;
             const body = this.playerCoin.getComponent(RigidBody);
             if (!body || !this.isBodyNearlyStopped(body)) return;
+            if (this.campaignSession && !this.campaignSession.canStartShot) return;
 
             this.gestureMode = 'charge';
             this.isCharging = true;
@@ -483,14 +524,18 @@ export class CoinFlickPrototype extends Component {
     private launchPlayerCoin(): void {
         if (!this.playerCoin) return;
 
+        const body = this.playerCoin.getComponent(RigidBody);
+        if (!body) return;
+        if (this.campaignSession && !this.campaignSession.beginShot()) return;
+        this.campaignShotElapsed = 0;
+
         // The designer table remains in readable logical values (1–10). Scaling
         // only the applied impulse preserves the original motion time and framing.
         const impulse = this.calculateChargeImpulse(this.chargeSeconds) * WORLD_SCALE;
         const direction = this.getLaunchDirection(new Vec3());
-        const body = this.playerCoin.getComponent(RigidBody);
 
-        body?.wakeUp();
-        body?.applyImpulse(direction.multiplyScalar(impulse));
+        body.wakeUp();
+        body.applyImpulse(direction.multiplyScalar(impulse));
         this.isCharging = false;
         this.chargeSeconds = 0;
         this.redrawChargeZone();
@@ -600,6 +645,178 @@ export class CoinFlickPrototype extends Component {
         const velocity = new Vec3();
         body.getLinearVelocity(velocity);
         return velocity.lengthSqr() < 0.05 * WORLD_SCALE * WORLD_SCALE;
+    }
+
+    private configureCampaignRules(
+        definition: CampaignLevelDefinition,
+        targetCoins: readonly Node[],
+    ): void {
+        this.teardownCampaignRules();
+        if (!this.playerCoin) throw new Error('闯关模式缺少玩家硬币。');
+        if (targetCoins.length !== definition.coins.targets.length) {
+            throw new Error('闯关目标硬币数量与配置不一致。');
+        }
+
+        this.campaignTargets = targetCoins.map((node, index) => {
+            const body = node.getComponent(RigidBody);
+            if (!body) throw new Error(`目标硬币 ${node.name} 缺少刚体。`);
+            return {
+                id: definition.coins.targets[index].id,
+                node,
+                body,
+                hitElapsed: 0,
+                settledElapsed: 0,
+                resolved: false,
+            };
+        });
+
+        this.campaignPlayerSpawn.set(...definition.coins.player.position);
+        this.campaignSession = new CampaignSession(
+            definition.startingLives,
+            definition.coins.targets.map((target) => target.id),
+            {
+                onLivesChanged: (lives, maximum, reason) => (
+                    this.onCampaignLivesChanged(lives, maximum, reason)
+                ),
+                onTargetHit: (targetId) => {
+                    console.info(`[闯关模式] 命中目标 ${targetId}，等待停止或掉落判定。`);
+                },
+                onTargetResolved: (targetId, resolution) => {
+                    console.info(`[闯关模式] 目标 ${targetId} 已结算：${resolution}`);
+                },
+                onOutcomeChanged: (outcome) => this.onCampaignOutcomeChanged(outcome),
+            },
+        );
+
+        const playerCollider = this.playerCoin.getComponent(CylinderCollider);
+        if (!playerCollider) throw new Error('闯关模式的玩家硬币缺少碰撞体。');
+        this.campaignPlayerCollider = playerCollider;
+        playerCollider.on('onCollisionEnter', this.onCampaignPlayerCollisionEnter, this);
+        console.info(
+            `[闯关模式] 初始生命 ${this.campaignSession.currentLives}，目标 ${this.campaignSession.remainingTargets} 枚。`,
+        );
+    }
+
+    private teardownCampaignRules(): void {
+        this.campaignPlayerCollider?.off(
+            'onCollisionEnter',
+            this.onCampaignPlayerCollisionEnter,
+            this,
+        );
+        this.campaignPlayerCollider = null;
+        this.campaignSession = null;
+        this.campaignTargets = [];
+        this.campaignShotElapsed = 0;
+    }
+
+    private onCampaignPlayerCollisionEnter(event?: ICollisionEvent): void {
+        if (!event || !this.campaignSession) return;
+        const target = this.campaignTargets.find((item) => (
+            !item.resolved && item.node === event.otherCollider.node
+        ));
+        if (!target) return;
+
+        if (this.campaignSession.markTargetHit(target.id)) {
+            target.hitElapsed = 0;
+            target.settledElapsed = 0;
+        }
+    }
+
+    private updateCampaignRules(deltaTime: number): void {
+        const session = this.campaignSession;
+        if (!session?.isShotInProgress || !this.playerCoin) return;
+
+        this.campaignShotElapsed += deltaTime;
+        this.campaignTargets.forEach((target) => {
+            if (target.resolved || !session.isTargetHit(target.id)) return;
+
+            target.hitElapsed += deltaTime;
+            if (this.isCoinFallingOffTable(target.node)) {
+                this.resolveCampaignTarget(target, 'fell');
+                return;
+            }
+
+            const velocity = new Vec3();
+            target.body.getLinearVelocity(velocity);
+            const isSlowEnough = velocity.lengthSqr() <= TARGET_SETTLE_SPEED * TARGET_SETTLE_SPEED;
+            if (target.hitElapsed >= SHOT_MINIMUM_SECONDS && isSlowEnough) {
+                target.settledElapsed += deltaTime;
+            } else {
+                target.settledElapsed = 0;
+            }
+            if (target.settledElapsed >= TARGET_SETTLE_SECONDS) {
+                this.resolveCampaignTarget(target, 'stopped');
+            }
+        });
+
+        if (session.currentOutcome !== 'playing' || !session.isShotInProgress) return;
+        const playerBody = this.playerCoin.getComponent(RigidBody);
+        if (!playerBody) return;
+
+        const playerFell = this.isCoinFallingOffTable(this.playerCoin);
+        const playerStopped = this.campaignShotElapsed >= SHOT_MINIMUM_SECONDS
+            && this.isBodyNearlyStopped(playerBody);
+        if ((!playerFell && !playerStopped) || session.hasPendingHitTargets()) return;
+
+        session.finishShot();
+        if (playerFell && session.currentOutcome === 'playing') {
+            this.resetCampaignPlayerCoin(playerBody);
+        }
+    }
+
+    private resolveCampaignTarget(
+        target: CampaignTargetRuntime,
+        resolution: CampaignTargetResolution,
+    ): void {
+        if (!this.campaignSession?.resolveTarget(target.id, resolution)) return;
+        target.resolved = true;
+        this.coinBodies = this.coinBodies.filter((coin) => coin.node !== target.node);
+
+        // Placeholder for the target disappearance VFX requested for a later task.
+        target.node.active = false;
+        target.node.destroy();
+    }
+
+    private resetCampaignPlayerCoin(body: RigidBody): void {
+        if (!this.playerCoin) return;
+        body.sleep();
+        body.clearVelocity();
+        body.angularFactor = Vec3.ZERO;
+        this.playerCoin.setPosition(this.campaignPlayerSpawn);
+        this.playerCoin.setRotation(Quat.IDENTITY);
+        const trackedCoin = this.coinBodies.find((coin) => coin.node === this.playerCoin);
+        if (trackedCoin) trackedCoin.isFalling = false;
+        body.wakeUp();
+    }
+
+    private isCoinFallingOffTable(coin: Node): boolean {
+        const position = coin.worldPosition;
+        const radialDistance = Math.sqrt(position.x * position.x + position.z * position.z);
+        const isPastEdge = radialDistance > this.tableRadius - this.coinRadius * 0.35;
+        const isDropping = position.y < this.coinHeight * 0.7;
+        return isPastEdge && isDropping;
+    }
+
+    private onCampaignLivesChanged(
+        currentLives: number,
+        startingLives: number,
+        reason: CampaignLifeLossReason,
+    ): void {
+        const reasonLabel = reason === 'shot-missed' ? '未命中任何目标' : '命中目标掉出桌外';
+        console.info(
+            `[闯关模式] ${reasonLabel}，生命 ${currentLives}/${startingLives}。`,
+        );
+    }
+
+    private onCampaignOutcomeChanged(outcome: CampaignOutcome): void {
+        if (outcome === 'failed') {
+            // Failure UI is intentionally deferred until its separate UI specification.
+            console.info('[闯关模式] 本关失败；失败界面 UI 等待后续接入。');
+            return;
+        }
+        if (outcome === 'succeeded') {
+            console.info('[闯关模式] 所有目标均已消失，本关成功。');
+        }
     }
 
     private getMaterial(

@@ -24,6 +24,7 @@ const DIRECTORY_METAS = {
   'assets/resources/game/modes/campaign/levels.meta': 'fbd7c565-a17e-4432-94e1-83b7d1bd524e',
   'assets/scripts/gameplay.meta': '71e71e0d-284e-4f32-91ca-e221c56885ba',
   'assets/scripts/modes.meta': 'c9e3e220-9be5-430b-92fa-f96832eb62ca',
+  'assets/scripts/modes/campaign.meta': '731ba74e-2c3d-477d-878b-000d250656f2',
 };
 
 const TEXT_METAS = {
@@ -36,6 +37,8 @@ const SCRIPT_METAS = {
   'assets/scripts/gameplay/PrefabAssetLibrary.ts.meta': '7ba3d85d-4b50-4a60-8fb1-d63668601933',
   'assets/scripts/gameplay/GameplayBuilder.ts.meta': 'b3c6f5d0-0066-42a6-b6f6-f39dba5c4417',
   'assets/scripts/modes/GameMode.ts.meta': 'c6eaa599-b291-4d43-ade7-3572993a0281',
+  'assets/scripts/modes/campaign/CampaignLevelConfig.ts.meta': 'd5e955d9-b9fc-49b9-8315-22cfbec44158',
+  'assets/scripts/modes/campaign/CampaignSession.ts.meta': '49421354-5d6e-4136-8ddb-4256b1fba531',
 };
 
 const vec3 = (x = 0, y = 0, z = 0) => ({ __type__: 'cc.Vec3', x, y, z });
