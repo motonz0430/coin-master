@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "contentType": "campaign-level",
+  "id": "level_003",
+  "displayName": "第三关",
+  "startingLives": 3,
+  "table": {
+    "prefabId": "table.purple-round",
+    "position": [0, -0.9, 0],
+    "scale": [57.2, 0.9, 57.2],
+    "radius": 28.6
+  },
+  "coins": {
+    "prefabId": "coin.gold",
+    "scale": [3.36, 0.12, 3.36],
+    "radius": 1.68,
+    "height": 0.24,
+    "player": {
+      "id": "player",
+      "position": [0, 0.2, 20]
+    },
+    "targets": [
+      {
+        "id": "target_1",
+        "position": [-12.6, 0.2, -17.7]
+      },
+      {
+        "id": "target_2",
+        "position": [14, 0.2, -21.1]
+      },
+      {
+        "id": "target_3",
+        "position": [8.4, 0.2, 4.3]
+      }
+    ]
+  },
+  "obstacles": {
+    "mode": "fixed",
+    "placements": [
+      {
+        "id": "dragon_1",
+        "prefabId": "obstacle.dragon-column",
+        "position": [-8, 1.9, 1.1],
+        "scale": [5.2, 1.9, 5.2],
+        "rotationY": 23
+      },
+      {
+        "id": "dragon_2",
+        "prefabId": "obstacle.dragon-column",
+        "position": [9.9, 1.9, -7.2],
+        "scale": [5.2, 1.9, 5.2],
+        "rotationY": -20
+      }
+    ]
+  },
+  "camera": {
+    "backDistance": 31,
+    "height": 42,
+    "lookAhead": 13.25,
+    "lookHeight": 0.25
+  }
+}
