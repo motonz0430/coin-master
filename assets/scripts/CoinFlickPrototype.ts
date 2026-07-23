@@ -239,10 +239,10 @@ export class CoinFlickPrototype extends Component {
         collider.height = 2;
         collider.material = this.createPhysicsMaterial(0.16, 0.72);
 
-        // Bullet uses a fixed 0.1-unit CCD swept sphere, which is thicker than
-        // this coin and can push it upward from the table. A 120 Hz fixed step
-        // with up to four substeps handles the current speed without that shape.
-        body.useCCD = false;
+        // In the 5x world the coin is 0.24 units thick, so its 0.12 half-height
+        // safely contains Bullet's fixed 0.1-unit CCD swept-sphere radius.
+        // Keep 120 Hz stepping as an independent safety layer for fast impacts.
+        body.useCCD = true;
 
         this.coinBodies.push({ node: coin, body, isFalling: false });
     }
