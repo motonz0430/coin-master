@@ -94,6 +94,11 @@ export class CampaignSession {
         return true;
     }
 
+    public spreadTargetHit(sourceTargetId: string, targetId: string): boolean {
+        if (!this.isTargetHit(sourceTargetId)) return false;
+        return this.markTargetHit(targetId);
+    }
+
     public isTargetHit(targetId: string): boolean {
         return this.targetStates[targetId] === 'hit';
     }

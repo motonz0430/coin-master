@@ -79,4 +79,44 @@ const { CampaignSession } = module.exports;
   assert.equal(session.currentOutcome, 'succeeded');
 }
 
+{
+  const hitOrder = [];
+  const lifeEvents = [];
+  const session = new CampaignSession(
+    3,
+    ['target-1', 'target-2', 'target-3'],
+    {
+      onTargetHit: (targetId) => hitOrder.push(targetId),
+      onLivesChanged: (lives, maximum, reason) => {
+        lifeEvents.push({ lives, maximum, reason });
+      },
+    },
+  );
+  assert.equal(session.beginShot(), true);
+  assert.equal(
+    session.spreadTargetHit('target-1', 'target-2'),
+    false,
+    '未命中的目标不能传播命中',
+  );
+  assert.equal(session.markTargetHit('target-1'), true);
+  assert.equal(session.spreadTargetHit('target-1', 'target-2'), true);
+  assert.equal(session.spreadTargetHit('target-2', 'target-3'), true);
+  assert.deepEqual(
+    hitOrder,
+    ['target-1', 'target-2', 'target-3'],
+    '命中应支持多级连锁传播',
+  );
+
+  assert.equal(session.resolveTarget('target-1', 'stopped'), true);
+  assert.equal(session.resolveTarget('target-2', 'fell'), true);
+  assert.equal(session.currentLives, 2);
+  assert.deepEqual(lifeEvents, [{
+    lives: 2,
+    maximum: 3,
+    reason: 'target-fell',
+  }]);
+  assert.equal(session.resolveTarget('target-3', 'stopped'), true);
+  assert.equal(session.currentOutcome, 'succeeded');
+}
+
 console.log('CampaignSession rules passed.');

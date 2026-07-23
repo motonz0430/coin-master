@@ -75,6 +75,7 @@ interface CampaignTargetRuntime {
     readonly id: string;
     readonly node: Node;
     readonly body: RigidBody;
+    readonly collider: CylinderCollider;
     hitElapsed: number;
     settledElapsed: number;
     resolved: boolean;
@@ -660,10 +661,13 @@ export class CoinFlickPrototype extends Component {
         this.campaignTargets = targetCoins.map((node, index) => {
             const body = node.getComponent(RigidBody);
             if (!body) throw new Error(`目标硬币 ${node.name} 缺少刚体。`);
+            const collider = node.getComponent(CylinderCollider);
+            if (!collider) throw new Error(`目标硬币 ${node.name} 缺少碰撞体。`);
             return {
                 id: definition.coins.targets[index].id,
                 node,
                 body,
+                collider,
                 hitElapsed: 0,
                 settledElapsed: 0,
                 resolved: false,
@@ -692,6 +696,13 @@ export class CoinFlickPrototype extends Component {
         if (!playerCollider) throw new Error('闯关模式的玩家硬币缺少碰撞体。');
         this.campaignPlayerCollider = playerCollider;
         playerCollider.on('onCollisionEnter', this.onCampaignPlayerCollisionEnter, this);
+        this.campaignTargets.forEach((target) => {
+            target.collider.on(
+                'onCollisionEnter',
+                this.onCampaignTargetCollisionEnter,
+                this,
+            );
+        });
         console.info(
             `[闯关模式] 初始生命 ${this.campaignSession.currentLives}，目标 ${this.campaignSession.remainingTargets} 枚。`,
         );
@@ -703,6 +714,13 @@ export class CoinFlickPrototype extends Component {
             this.onCampaignPlayerCollisionEnter,
             this,
         );
+        this.campaignTargets.forEach((target) => {
+            target.collider.off(
+                'onCollisionEnter',
+                this.onCampaignTargetCollisionEnter,
+                this,
+            );
+        });
         this.campaignPlayerCollider = null;
         this.campaignSession = null;
         this.campaignTargets = [];
@@ -716,10 +734,37 @@ export class CoinFlickPrototype extends Component {
         ));
         if (!target) return;
 
-        if (this.campaignSession.markTargetHit(target.id)) {
-            target.hitElapsed = 0;
-            target.settledElapsed = 0;
+        this.markCampaignTargetHit(target);
+    }
+
+    private onCampaignTargetCollisionEnter(event?: ICollisionEvent): void {
+        const session = this.campaignSession;
+        if (!event || !session?.isShotInProgress) return;
+
+        const source = this.campaignTargets.find((item) => (
+            !item.resolved && item.node === event.selfCollider.node
+        ));
+        const target = this.campaignTargets.find((item) => (
+            !item.resolved && item.node === event.otherCollider.node
+        ));
+        if (!source || !target) return;
+
+        if (session.spreadTargetHit(source.id, target.id)) {
+            this.resetCampaignTargetSettlement(target);
+            console.info(
+                `[闯关模式] 目标 ${source.id} 连锁命中 ${target.id}。`,
+            );
         }
+    }
+
+    private markCampaignTargetHit(target: CampaignTargetRuntime): void {
+        if (!this.campaignSession?.markTargetHit(target.id)) return;
+        this.resetCampaignTargetSettlement(target);
+    }
+
+    private resetCampaignTargetSettlement(target: CampaignTargetRuntime): void {
+        target.hitElapsed = 0;
+        target.settledElapsed = 0;
     }
 
     private updateCampaignRules(deltaTime: number): void {
@@ -770,6 +815,11 @@ export class CoinFlickPrototype extends Component {
     ): void {
         if (!this.campaignSession?.resolveTarget(target.id, resolution)) return;
         target.resolved = true;
+        target.collider.off(
+            'onCollisionEnter',
+            this.onCampaignTargetCollisionEnter,
+            this,
+        );
         this.coinBodies = this.coinBodies.filter((coin) => coin.node !== target.node);
 
         // Placeholder for the target disappearance VFX requested for a later task.
