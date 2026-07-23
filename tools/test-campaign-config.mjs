@@ -140,8 +140,8 @@ assert.deepEqual(
 assert.deepEqual(
   parsedLevel003.coins.targets.map((target) => [...target.position]),
   [
-    [-12.6, 0.2, -17.7],
-    [14, 0.2, -21.1],
+    [-10.8, 0.2, -15.2],
+    [12, 0.2, -18.1],
     [8.4, 0.2, 4.3],
   ],
 );
