@@ -100,8 +100,8 @@ export class CoinFlickPrototype extends Component {
     protected start(): void {
         profiler.hideStats();
         const physicsSystem = PhysicsSystem.instance;
-        physicsSystem.fixedTimeStep = 1 / 60;
-        physicsSystem.maxSubSteps = 2;
+        physicsSystem.fixedTimeStep = 1 / 120;
+        physicsSystem.maxSubSteps = 4;
         // Keep motion timing visually identical after enlarging every gameplay
         // distance. Gravity, launch velocity and velocity thresholds must scale
         // with the world; dimensionless material and damping values stay intact.
@@ -241,7 +241,7 @@ export class CoinFlickPrototype extends Component {
 
         // In the 5x world the coin is 0.24 units thick, so its 0.12 half-height
         // safely contains Bullet's fixed 0.1-unit CCD swept-sphere radius.
-        // CCD handles fast impacts while 60 Hz stepping keeps mobile CPU cost down.
+        // Keep 120 Hz stepping as an independent safety layer for fast impacts.
         body.useCCD = true;
 
         this.coinBodies.push({ node: coin, body, isFalling: false });
