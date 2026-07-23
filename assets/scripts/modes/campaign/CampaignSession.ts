@@ -1,8 +1,15 @@
 export type CampaignOutcome = 'playing' | 'succeeded' | 'failed';
-export type CampaignLifeLossReason = 'shot-missed' | 'target-fell';
+export type CampaignLifeLossReason = 'shot-missed' | 'player-fell' | 'target-fell';
 export type CampaignTargetResolution = 'stopped' | 'fell';
 
 type CampaignTargetState = 'active' | 'hit' | 'resolved';
+
+export interface CampaignShotResult {
+    readonly playerResolution: CampaignTargetResolution;
+    readonly hitTargetIds: readonly string[];
+    readonly survivingHitTargetIds: readonly string[];
+    readonly nextControlTargetId: string | null;
+}
 
 export interface CampaignSessionCallbacks {
     readonly onLivesChanged?: (
@@ -27,7 +34,11 @@ export class CampaignSession {
     private lives: number;
     private remainingTargetCount: number;
     private shotInProgress = false;
-    private shotHitAnyTarget = false;
+    private shotHitOrder: string[] = [];
+    private shotTargetResolutions: Record<string, CampaignTargetResolution> = Object.create(null) as Record<
+        string,
+        CampaignTargetResolution
+    >;
     private outcome: CampaignOutcome = 'playing';
 
     constructor(
@@ -80,7 +91,11 @@ export class CampaignSession {
     public beginShot(): boolean {
         if (!this.canStartShot) return false;
         this.shotInProgress = true;
-        this.shotHitAnyTarget = false;
+        this.shotHitOrder = [];
+        this.shotTargetResolutions = Object.create(null) as Record<
+            string,
+            CampaignTargetResolution
+        >;
         return true;
     }
 
@@ -89,7 +104,7 @@ export class CampaignSession {
         if (this.targetStates[targetId] !== 'active') return false;
 
         this.targetStates[targetId] = 'hit';
-        this.shotHitAnyTarget = true;
+        this.shotHitOrder.push(targetId);
         this.callbacks.onTargetHit?.(targetId);
         return true;
     }
@@ -116,32 +131,49 @@ export class CampaignSession {
         }
 
         this.targetStates[targetId] = 'resolved';
+        this.shotTargetResolutions[targetId] = resolution;
         this.remainingTargetCount -= 1;
         this.callbacks.onTargetResolved?.(targetId, resolution);
 
-        // Life loss is deliberately evaluated before success. If the last
-        // target falls and consumes the last life, the level fails.
         if (resolution === 'fell') {
-            if (this.loseLife('target-fell')) return true;
-        }
-
-        if (this.remainingTargetCount === 0) {
-            this.outcome = 'succeeded';
-            this.shotInProgress = false;
-            this.callbacks.onOutcomeChanged?.(this.outcome);
+            this.loseLife('target-fell');
         }
         return true;
     }
 
-    public finishShot(): boolean {
-        if (!this.shotInProgress || this.outcome !== 'playing') return false;
-        if (this.hasPendingHitTargets()) return false;
+    public finishShot(
+        playerResolution: CampaignTargetResolution,
+    ): CampaignShotResult | null {
+        if (!this.shotInProgress || this.outcome !== 'playing') return null;
+        if (this.hasPendingHitTargets()) return null;
+
+        const hitTargetIds = [...this.shotHitOrder];
+        const survivingHitTargetIds = hitTargetIds.filter((targetId) => (
+            this.shotTargetResolutions[targetId] === 'stopped'
+        ));
+        const nextControlTargetId = survivingHitTargetIds.length > 0
+            ? survivingHitTargetIds[survivingHitTargetIds.length - 1]
+            : null;
 
         this.shotInProgress = false;
-        if (!this.shotHitAnyTarget) {
-            this.loseLife('shot-missed');
+        if (hitTargetIds.length === 0) {
+            this.loseLife(playerResolution === 'fell' ? 'player-fell' : 'shot-missed');
         }
-        return true;
+
+        // Target-fall life loss is always resolved before victory. A shot only
+        // succeeds after its whole hit chain has settled and at least one life
+        // remains.
+        if (this.outcome === 'playing' && this.remainingTargetCount === 0) {
+            this.outcome = 'succeeded';
+            this.callbacks.onOutcomeChanged?.(this.outcome);
+        }
+
+        return {
+            playerResolution,
+            hitTargetIds,
+            survivingHitTargetIds,
+            nextControlTargetId,
+        };
     }
 
     private loseLife(reason: CampaignLifeLossReason): boolean {

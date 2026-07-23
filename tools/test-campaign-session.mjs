@@ -33,9 +33,28 @@ const { CampaignSession } = module.exports;
     },
   });
   assert.equal(session.beginShot(), true);
-  assert.equal(session.finishShot(), true);
+  const result = session.finishShot('fell');
+  assert.equal(result.nextControlTargetId, null);
   assert.equal(session.currentLives, 1);
   assert.equal(session.currentOutcome, 'playing');
+  assert.deepEqual(lifeEvents, [{
+    lives: 1,
+    maximum: 2,
+    reason: 'player-fell',
+  }]);
+}
+
+{
+  const lifeEvents = [];
+  const session = new CampaignSession(2, ['target-1'], {
+    onLivesChanged: (lives, maximum, reason) => {
+      lifeEvents.push({ lives, maximum, reason });
+    },
+  });
+  assert.equal(session.beginShot(), true);
+  const result = session.finishShot('stopped');
+  assert.equal(result.nextControlTargetId, null);
+  assert.equal(session.currentLives, 1);
   assert.deepEqual(lifeEvents, [{
     lives: 1,
     maximum: 2,
@@ -47,8 +66,10 @@ const { CampaignSession } = module.exports;
   const session = new CampaignSession(1, ['target-1']);
   assert.equal(session.beginShot(), true);
   assert.equal(session.markTargetHit('target-1'), true);
-  assert.equal(session.finishShot(), false, '命中目标未停止前，本次发射不能提前结束');
+  assert.equal(session.finishShot('stopped'), null, '命中目标未停止前，本次发射不能提前结束');
   assert.equal(session.resolveTarget('target-1', 'stopped'), true);
+  const result = session.finishShot('stopped');
+  assert.equal(result.nextControlTargetId, 'target-1');
   assert.equal(session.currentLives, 1);
   assert.equal(session.currentOutcome, 'succeeded');
 }
@@ -75,6 +96,10 @@ const { CampaignSession } = module.exports;
   assert.equal(session.resolveTarget('target-1', 'stopped'), true);
   assert.equal(session.hasPendingHitTargets(), true);
   assert.equal(session.resolveTarget('target-2', 'fell'), true);
+  const result = session.finishShot('stopped');
+  assert.deepEqual([...result.hitTargetIds], ['target-1', 'target-2']);
+  assert.deepEqual([...result.survivingHitTargetIds], ['target-1']);
+  assert.equal(result.nextControlTargetId, 'target-1');
   assert.equal(session.currentLives, 2);
   assert.equal(session.currentOutcome, 'succeeded');
 }
@@ -116,7 +141,61 @@ const { CampaignSession } = module.exports;
     reason: 'target-fell',
   }]);
   assert.equal(session.resolveTarget('target-3', 'stopped'), true);
+  const result = session.finishShot('stopped');
+  assert.deepEqual([...result.survivingHitTargetIds], ['target-1', 'target-3']);
+  assert.equal(
+    result.nextControlTargetId,
+    'target-3',
+    '最后一个仍在桌上的命中硬币应接管控制权',
+  );
   assert.equal(session.currentOutcome, 'succeeded');
+}
+
+{
+  const lifeEvents = [];
+  const session = new CampaignSession(
+    4,
+    ['target-1', 'target-2', 'target-3'],
+    {
+      onLivesChanged: (lives, maximum, reason) => {
+        lifeEvents.push({ lives, maximum, reason });
+      },
+    },
+  );
+  assert.equal(session.beginShot(), true);
+  assert.equal(session.markTargetHit('target-1'), true);
+  assert.equal(session.spreadTargetHit('target-1', 'target-2'), true);
+  assert.equal(session.spreadTargetHit('target-2', 'target-3'), true);
+  assert.equal(session.resolveTarget('target-1', 'fell'), true);
+  assert.equal(session.resolveTarget('target-2', 'fell'), true);
+  assert.equal(session.resolveTarget('target-3', 'fell'), true);
+  const result = session.finishShot('stopped');
+  assert.equal(session.currentLives, 1, '每枚掉落的命中传递硬币都应扣 1 点生命');
+  assert.equal(result.nextControlTargetId, null, '没有命中硬币留在桌面时保持当前控制硬币');
+  assert.deepEqual(lifeEvents.map((event) => event.reason), [
+    'target-fell',
+    'target-fell',
+    'target-fell',
+  ]);
+  assert.equal(session.currentOutcome, 'succeeded');
+}
+
+{
+  const session = new CampaignSession(3, ['target-1', 'target-2', 'target-3']);
+  assert.equal(session.beginShot(), true);
+  assert.equal(session.markTargetHit('target-1'), true);
+  assert.equal(session.spreadTargetHit('target-1', 'target-2'), true);
+  assert.equal(session.spreadTargetHit('target-2', 'target-3'), true);
+  assert.equal(session.resolveTarget('target-1', 'stopped'), true);
+  assert.equal(session.resolveTarget('target-2', 'stopped'), true);
+  assert.equal(session.resolveTarget('target-3', 'fell'), true);
+  const result = session.finishShot('fell');
+  assert.equal(
+    result.nextControlTargetId,
+    'target-2',
+    '命中链末端掉落后，应选择命中顺序中最后一枚仍在桌面的硬币',
+  );
+  assert.equal(session.currentLives, 2);
 }
 
 console.log('CampaignSession rules passed.');

@@ -55,6 +55,7 @@ import {
 import type {
     CampaignLifeLossReason,
     CampaignOutcome,
+    CampaignShotResult,
     CampaignTargetResolution,
 } from './modes/campaign/CampaignSession';
 
@@ -79,6 +80,7 @@ interface CampaignTargetRuntime {
     hitElapsed: number;
     settledElapsed: number;
     resolved: boolean;
+    resolution: CampaignTargetResolution | null;
 }
 
 /**
@@ -142,7 +144,7 @@ export class CoinFlickPrototype extends Component {
     private campaignTargets: CampaignTargetRuntime[] = [];
     private campaignPlayerCollider: CylinderCollider | null = null;
     private campaignShotElapsed = 0;
-    private readonly campaignPlayerSpawn = new Vec3();
+    private readonly campaignPlayerSafePosition = new Vec3();
 
     protected start(): void {
         profiler.hideStats();
@@ -698,10 +700,11 @@ export class CoinFlickPrototype extends Component {
                 hitElapsed: 0,
                 settledElapsed: 0,
                 resolved: false,
+                resolution: null,
             };
         });
 
-        this.campaignPlayerSpawn.set(...definition.coins.player.position);
+        this.campaignPlayerSafePosition.set(...definition.coins.player.position);
         this.campaignSession = new CampaignSession(
             definition.startingLives,
             definition.coins.targets.map((target) => target.id),
@@ -842,10 +845,9 @@ export class CoinFlickPrototype extends Component {
             && this.isBodyNearlyStopped(playerBody);
         if ((!playerFell && !playerStopped) || session.hasPendingHitTargets()) return;
 
-        session.finishShot();
-        if (playerFell && session.currentOutcome === 'playing') {
-            this.resetCampaignPlayerCoin(playerBody);
-        }
+        const result = session.finishShot(playerFell ? 'fell' : 'stopped');
+        if (!result) return;
+        this.finalizeCampaignShot(result, playerBody);
     }
 
     private resolveCampaignTarget(
@@ -854,12 +856,85 @@ export class CoinFlickPrototype extends Component {
     ): void {
         if (!this.campaignSession?.resolveTarget(target.id, resolution)) return;
         target.resolved = true;
+        target.resolution = resolution;
+        target.collider.off(
+            'onCollisionEnter',
+            this.onCampaignTargetCollisionEnter,
+            this,
+        );
+        if (resolution === 'fell') {
+            this.retireCampaignTarget(target);
+        }
+    }
+
+    private finalizeCampaignShot(
+        result: CampaignShotResult,
+        currentPlayerBody: RigidBody,
+    ): void {
+        const nextControlTarget = result.nextControlTargetId
+            ? this.campaignTargets.find((target) => target.id === result.nextControlTargetId)
+            : undefined;
+        const resolvedTargets = this.campaignTargets.filter((target) => (
+            result.hitTargetIds.indexOf(target.id) >= 0
+        ));
+
+        resolvedTargets.forEach((target) => {
+            if (target !== nextControlTarget) {
+                this.retireCampaignTarget(target);
+            }
+        });
+
+        if (nextControlTarget) {
+            this.promoteCampaignTargetToPlayer(nextControlTarget);
+            return;
+        }
+
+        if (this.campaignSession?.currentOutcome === 'failed' || !this.playerCoin) return;
+        if (result.playerResolution === 'fell') {
+            this.resetCampaignPlayerCoin(currentPlayerBody);
+        } else {
+            this.campaignPlayerSafePosition.set(this.playerCoin.position);
+        }
+    }
+
+    private promoteCampaignTargetToPlayer(target: CampaignTargetRuntime): void {
+        if (!this.playerCoin) return;
+
+        this.campaignPlayerCollider?.off(
+            'onCollisionEnter',
+            this.onCampaignPlayerCollisionEnter,
+            this,
+        );
+        const previousPlayer = this.playerCoin;
+        this.coinBodies = this.coinBodies.filter((coin) => coin.node !== previousPlayer);
+        previousPlayer.active = false;
+        previousPlayer.destroy();
+
+        this.campaignTargets = this.campaignTargets.filter((item) => item !== target);
+        this.playerCoin = target.node;
+        this.playerCoin.name = 'Coin_Player';
+        target.body.sleep();
+        target.body.clearVelocity();
+        target.body.angularFactor = Vec3.ZERO;
+        this.playerCoin.setRotation(Quat.IDENTITY);
+        this.campaignPlayerSafePosition.set(this.playerCoin.position);
+        const trackedCoin = this.coinBodies.find((coin) => coin.node === this.playerCoin);
+        if (trackedCoin) trackedCoin.isFalling = false;
+
+        this.campaignPlayerCollider = target.collider;
+        target.collider.on('onCollisionEnter', this.onCampaignPlayerCollisionEnter, this);
+        target.body.wakeUp();
+        console.info(`[闯关模式] 控制权已转移到最后命中的桌面硬币 ${target.id}。`);
+    }
+
+    private retireCampaignTarget(target: CampaignTargetRuntime): void {
         target.collider.off(
             'onCollisionEnter',
             this.onCampaignTargetCollisionEnter,
             this,
         );
         this.coinBodies = this.coinBodies.filter((coin) => coin.node !== target.node);
+        this.campaignTargets = this.campaignTargets.filter((item) => item !== target);
 
         // Placeholder for the target disappearance VFX requested for a later task.
         target.node.active = false;
@@ -871,7 +946,7 @@ export class CoinFlickPrototype extends Component {
         body.sleep();
         body.clearVelocity();
         body.angularFactor = Vec3.ZERO;
-        this.playerCoin.setPosition(this.campaignPlayerSpawn);
+        this.playerCoin.setPosition(this.campaignPlayerSafePosition);
         this.playerCoin.setRotation(Quat.IDENTITY);
         const trackedCoin = this.coinBodies.find((coin) => coin.node === this.playerCoin);
         if (trackedCoin) trackedCoin.isFalling = false;
@@ -891,7 +966,11 @@ export class CoinFlickPrototype extends Component {
         startingLives: number,
         reason: CampaignLifeLossReason,
     ): void {
-        const reasonLabel = reason === 'shot-missed' ? '未命中任何目标' : '命中目标掉出桌外';
+        const reasonLabel = reason === 'shot-missed'
+            ? '未命中任何目标'
+            : reason === 'player-fell'
+                ? '当前控制硬币掉出桌外'
+                : '命中传递硬币掉出桌外';
         if (this.campaignLivesLabel) {
             this.campaignLivesLabel.string = `生命：${currentLives}/${startingLives}`;
         }
