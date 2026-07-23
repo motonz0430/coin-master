@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "level_001",
-  "displayName": "基础玩法",
+  "contentType": "sandbox-setup",
+  "id": "core_gameplay",
+  "displayName": "基础玩法测试样板",
   "table": {
     "prefabId": "table.purple-round",
     "position": [0, -0.9, 0],

@@ -1,6 +1,6 @@
 import { Node, Prefab, TextAsset, instantiate, resources } from 'cc';
-import type { AssetCatalog } from './LevelConfig';
-import { parseAssetCatalog } from './LevelConfig';
+import type { AssetCatalog } from './GameplayConfig';
+import { parseAssetCatalog } from './GameplayConfig';
 
 const DEFAULT_CATALOG_PATH = 'game/asset_catalog';
 

@@ -18,19 +18,24 @@ const UUID = {
 const DIRECTORY_METAS = {
   'assets/resources/game.meta': '180c287e-5b8c-41a1-8c90-ffb151dfd9f0',
   'assets/resources/game/prefabs.meta': '23a4533a-3e75-49b8-980f-a1de579160b4',
-  'assets/resources/game/levels.meta': '5e30fa9b-1120-4856-91b6-59028693297b',
-  'assets/scripts/level.meta': '71e71e0d-284e-4f32-91ca-e221c56885ba',
+  'assets/resources/game/setups.meta': '5e30fa9b-1120-4856-91b6-59028693297b',
+  'assets/resources/game/modes.meta': '8d6acdc8-3d1d-48cb-8470-10ff8bee2b00',
+  'assets/resources/game/modes/campaign.meta': 'dfc8e180-a451-4e35-8869-4d0cb04a08be',
+  'assets/resources/game/modes/campaign/levels.meta': 'fbd7c565-a17e-4432-94e1-83b7d1bd524e',
+  'assets/scripts/gameplay.meta': '71e71e0d-284e-4f32-91ca-e221c56885ba',
+  'assets/scripts/modes.meta': 'c9e3e220-9be5-430b-92fa-f96832eb62ca',
 };
 
 const TEXT_METAS = {
   'assets/resources/game/asset_catalog.json.meta': '6f4cb664-c2e8-4d1d-a2f4-88a2649bfd89',
-  'assets/resources/game/levels/level_001.json.meta': '16c1d270-96a7-4d7b-af1f-134332eabf6c',
+  'assets/resources/game/setups/core_gameplay.json.meta': '16c1d270-96a7-4d7b-af1f-134332eabf6c',
 };
 
 const SCRIPT_METAS = {
-  'assets/scripts/level/LevelConfig.ts.meta': '405da631-e521-445d-ac69-d8b890faf288',
-  'assets/scripts/level/PrefabAssetLibrary.ts.meta': '7ba3d85d-4b50-4a60-8fb1-d63668601933',
-  'assets/scripts/level/LevelBuilder.ts.meta': 'b3c6f5d0-0066-42a6-b6f6-f39dba5c4417',
+  'assets/scripts/gameplay/GameplayConfig.ts.meta': '405da631-e521-445d-ac69-d8b890faf288',
+  'assets/scripts/gameplay/PrefabAssetLibrary.ts.meta': '7ba3d85d-4b50-4a60-8fb1-d63668601933',
+  'assets/scripts/gameplay/GameplayBuilder.ts.meta': 'b3c6f5d0-0066-42a6-b6f6-f39dba5c4417',
+  'assets/scripts/modes/GameMode.ts.meta': 'c6eaa599-b291-4d43-ade7-3572993a0281',
 };
 
 const vec3 = (x = 0, y = 0, z = 0) => ({ __type__: 'cc.Vec3', x, y, z });

@@ -1,13 +1,14 @@
 import { Node } from 'cc';
 import type {
     FixedObstaclePlacement,
-    LevelDefinition,
+    GameplayContentType,
+    GameplayDefinition,
     RandomObstacleDefinition,
-} from './LevelConfig';
-import { parseLevelDefinition } from './LevelConfig';
+} from './GameplayConfig';
+import { parseGameplayDefinition } from './GameplayConfig';
 import { PrefabAssetLibrary, loadJsonData } from './PrefabAssetLibrary';
 
-export interface BuiltLevel {
+export interface BuiltGameplay {
     readonly root: Node;
     readonly table: Node;
     readonly playerCoin: Node;
@@ -15,20 +16,23 @@ export interface BuiltLevel {
     readonly obstacles: readonly Node[];
 }
 
-export async function loadLevelDefinition(resourcePath: string): Promise<LevelDefinition> {
-    return parseLevelDefinition(await loadJsonData(resourcePath));
+export async function loadGameplayDefinition(
+    resourcePath: string,
+    expectedContentType: GameplayContentType,
+): Promise<GameplayDefinition> {
+    return parseGameplayDefinition(await loadJsonData(resourcePath), expectedContentType);
 }
 
-export async function buildLevel(
+export async function buildGameplay(
     sceneRoot: Node,
-    definition: LevelDefinition,
+    definition: GameplayDefinition,
     library: PrefabAssetLibrary,
-): Promise<BuiltLevel> {
+): Promise<BuiltGameplay> {
     const prefabIds = collectPrefabIds(definition);
     await library.preload(prefabIds);
     removeEditorPreview(sceneRoot);
 
-    const root = new Node('LevelRuntime');
+    const root = new Node('GameplayRuntime');
     sceneRoot.addChild(root);
 
     const table = library.instantiate(definition.table.prefabId);
@@ -65,7 +69,7 @@ export async function buildLevel(
     return { root, table, playerCoin, targetCoins, obstacles };
 }
 
-function collectPrefabIds(definition: LevelDefinition): string[] {
+function collectPrefabIds(definition: GameplayDefinition): string[] {
     const obstacleIds = definition.obstacles.mode === 'random'
         ? [definition.obstacles.prefabId]
         : definition.obstacles.placements.map((placement) => placement.prefabId);
@@ -92,7 +96,7 @@ function createCoin(
 
 function buildRandomObstacles(
     root: Node,
-    definition: LevelDefinition,
+    definition: GameplayDefinition,
     library: PrefabAssetLibrary,
 ): Node[] {
     const settings = definition.obstacles as RandomObstacleDefinition;
@@ -182,8 +186,10 @@ function randomRange(minimum: number, maximum: number): number {
 }
 
 function removeEditorPreview(sceneRoot: Node): void {
-    const oldRuntime = sceneRoot.getChildByName('LevelRuntime');
-    if (oldRuntime) detachAndDestroy(oldRuntime);
+    const oldGameplayRuntime = sceneRoot.getChildByName('GameplayRuntime');
+    if (oldGameplayRuntime) detachAndDestroy(oldGameplayRuntime);
+    const oldLevelRuntime = sceneRoot.getChildByName('LevelRuntime');
+    if (oldLevelRuntime) detachAndDestroy(oldLevelRuntime);
     const editorPreview = sceneRoot.getChildByName('EditorPreview');
     if (editorPreview) detachAndDestroy(editorPreview);
 

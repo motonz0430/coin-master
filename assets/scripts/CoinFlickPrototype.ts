@@ -8,6 +8,7 @@ import {
     DirectionalLight,
     director,
     ERigidBodyType,
+    Enum,
     EventTouch,
     Graphics,
     HorizontalTextAlignment,
@@ -38,9 +39,10 @@ import {
     sampleChargeCurve,
 } from './ChargeCurveTable';
 import type { ChargeCurvePoint } from './ChargeCurveTable';
-import { buildLevel, loadLevelDefinition } from './level/LevelBuilder';
-import type { CameraDefinition, LevelDefinition } from './level/LevelConfig';
-import { PrefabAssetLibrary } from './level/PrefabAssetLibrary';
+import { buildGameplay, loadGameplayDefinition } from './gameplay/GameplayBuilder';
+import type { CameraDefinition, GameplayDefinition } from './gameplay/GameplayConfig';
+import { PrefabAssetLibrary } from './gameplay/PrefabAssetLibrary';
+import { GameMode, resolveGameplayContent } from './modes/GameMode';
 
 const { ccclass, property } = _decorator;
 
@@ -56,7 +58,8 @@ type GestureMode = 'none' | 'camera' | 'charge';
  * 《羊蹄山之魂》式弹钱币操作原型。
  *
  * - Main.scene 只保存摄像机、灯光和可视化编辑预览。
- * - 桌面、硬币和障碍物由关卡配置从共享 Prefab 资产库生成。
+ * - 桌面、硬币和障碍物由玩法内容配置从共享 Prefab 资产库生成。
+ * - 基础玩法样板用于开发测试；所有正式关卡只属于闯关模式。
  * - 玩家只控制黄色硬币。
  * - 屏幕主体左右拖拽，镜头围绕玩家硬币旋转。
  * - 镜头正前方就是硬币发射方向。
@@ -71,8 +74,14 @@ export class CoinFlickPrototype extends Component {
     @property({ tooltip: '底部蓄力热区占屏幕高度的比例' })
     public chargeZoneHeightRatio = 0.19;
 
-    @property({ tooltip: 'resources 下的关卡配置路径，不包含扩展名' })
-    public levelResourcePath = 'game/levels/level_001';
+    @property({ type: Enum(GameMode), tooltip: '当前启动的游戏模式' })
+    public gameMode = GameMode.SANDBOX;
+
+    @property({ tooltip: '基础玩法测试样板路径，不包含扩展名' })
+    public sandboxSetupResourcePath = 'game/setups/core_gameplay';
+
+    @property({ tooltip: '闯关模式的当前关卡路径；正式关卡只能位于 campaign/levels 下' })
+    public campaignLevelResourcePath = '';
 
     private coinRadius = 0.336 * WORLD_SCALE;
     private coinHeight = 0.048 * WORLD_SCALE;
@@ -115,7 +124,7 @@ export class CoinFlickPrototype extends Component {
         this.bindBootstrapScene();
         this.createUserInterface();
         this.updateCameraRig();
-        void this.loadConfiguredLevel();
+        void this.loadSelectedGameplay();
 
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
@@ -169,30 +178,37 @@ export class CoinFlickPrototype extends Component {
         light.shadowOrthoSize = 7.2 * WORLD_SCALE;
     }
 
-    private async loadConfiguredLevel(): Promise<void> {
+    private async loadSelectedGameplay(): Promise<void> {
         try {
+            const request = resolveGameplayContent(
+                this.gameMode,
+                this.sandboxSetupResourcePath,
+                this.campaignLevelResourcePath,
+            );
             const [definition, library] = await Promise.all([
-                loadLevelDefinition(this.levelResourcePath),
+                loadGameplayDefinition(request.resourcePath, request.contentType),
                 PrefabAssetLibrary.create(),
             ]);
-            const builtLevel = await buildLevel(this.node, definition, library);
-            this.applyLevelDefinition(definition);
-            this.table = builtLevel.table;
-            this.playerCoin = builtLevel.playerCoin;
-            this.obstacles = [...builtLevel.obstacles];
+            const builtGameplay = await buildGameplay(this.node, definition, library);
+            this.applyGameplayDefinition(definition);
+            this.table = builtGameplay.table;
+            this.playerCoin = builtGameplay.playerCoin;
+            this.obstacles = [...builtGameplay.obstacles];
 
-            this.configureScenePhysics(builtLevel.targetCoins);
-            this.applySceneMaterials(builtLevel.targetCoins);
-            this.configureLightingAndShadows(builtLevel.targetCoins);
+            this.configureScenePhysics(builtGameplay.targetCoins);
+            this.applySceneMaterials(builtGameplay.targetCoins);
+            this.configureLightingAndShadows(builtGameplay.targetCoins);
             this.updateCameraRig();
-            console.info(`[关卡] 已从 Prefab 资产库载入 ${definition.id}：${definition.displayName}`);
+            console.info(
+                `[${request.modeName}] 已从 Prefab 资产库载入 ${definition.id}：${definition.displayName}`,
+            );
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            console.error(`[关卡] 加载失败：${message}`);
+            console.error(`[游戏模式] 内容加载失败：${message}`);
         }
     }
 
-    private applyLevelDefinition(definition: LevelDefinition): void {
+    private applyGameplayDefinition(definition: GameplayDefinition): void {
         this.coinRadius = definition.coins.radius;
         this.coinHeight = definition.coins.height;
         this.tableRadius = definition.table.radius;
@@ -201,7 +217,7 @@ export class CoinFlickPrototype extends Component {
 
     private configureScenePhysics(targetCoins: readonly Node[]): void {
         if (!this.table || !this.playerCoin) {
-            throw new Error('关卡构建完成后缺少桌面或玩家硬币。');
+            throw new Error('玩法内容构建完成后缺少桌面或玩家硬币。');
         }
 
         const tableBody = this.table.getComponent(RigidBody) ?? this.table.addComponent(RigidBody);

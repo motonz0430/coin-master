@@ -1,4 +1,5 @@
 export type Vec3Tuple = [number, number, number];
+export type GameplayContentType = 'sandbox-setup' | 'campaign-level';
 
 export interface AssetCatalog {
     readonly schemaVersion: 1;
@@ -61,8 +62,9 @@ export interface CameraDefinition {
     readonly lookHeight: number;
 }
 
-export interface LevelDefinition {
+export interface GameplayDefinition {
     readonly schemaVersion: 1;
+    readonly contentType: GameplayContentType;
     readonly id: string;
     readonly displayName: string;
     readonly table: TableDefinition;
@@ -88,20 +90,30 @@ export function parseAssetCatalog(value: unknown): AssetCatalog {
     return { schemaVersion: 1, assets };
 }
 
-export function parseLevelDefinition(value: unknown): LevelDefinition {
-    const level = requireObject(value, '关卡配置');
-    requireSchemaVersion(level);
+export function parseGameplayDefinition(
+    value: unknown,
+    expectedContentType: GameplayContentType,
+): GameplayDefinition {
+    const content = requireObject(value, '玩法内容配置');
+    requireSchemaVersion(content);
+    const contentType = requireNonEmptyString(content.contentType, 'contentType');
+    if (contentType !== expectedContentType) {
+        throw new Error(
+            `玩法内容类型不匹配：期望 ${expectedContentType}，实际为 ${contentType}。`,
+        );
+    }
 
-    const table = requireObject(level.table, 'table');
-    const coins = requireObject(level.coins, 'coins');
+    const table = requireObject(content.table, 'table');
+    const coins = requireObject(content.coins, 'coins');
     const player = requireObject(coins.player, 'coins.player');
     const rawTargets = requireArray(coins.targets, 'coins.targets');
-    const camera = requireObject(level.camera, 'camera');
+    const camera = requireObject(content.camera, 'camera');
 
-    const definition: LevelDefinition = {
+    const definition: GameplayDefinition = {
         schemaVersion: 1,
-        id: requireNonEmptyString(level.id, 'id'),
-        displayName: requireNonEmptyString(level.displayName, 'displayName'),
+        contentType: expectedContentType,
+        id: requireNonEmptyString(content.id, 'id'),
+        displayName: requireNonEmptyString(content.displayName, 'displayName'),
         table: {
             prefabId: requireNonEmptyString(table.prefabId, 'table.prefabId'),
             position: requireVec3(table.position, 'table.position'),
@@ -118,7 +130,7 @@ export function parseLevelDefinition(value: unknown): LevelDefinition {
                 parseCoinSpawn(requireObject(target, `coins.targets[${index}]`), `coins.targets[${index}]`)
             )),
         },
-        obstacles: parseObstacles(level.obstacles),
+        obstacles: parseObstacles(content.obstacles),
         camera: {
             backDistance: requirePositiveNumber(camera.backDistance, 'camera.backDistance'),
             height: requirePositiveNumber(camera.height, 'camera.height'),
@@ -135,7 +147,7 @@ export function parseLevelDefinition(value: unknown): LevelDefinition {
         throw new Error('玩家硬币和目标硬币的 id 不能重复。');
     }
     if (definition.coins.targets.length === 0) {
-        throw new Error('关卡至少需要一枚目标硬币。');
+        throw new Error('玩法内容至少需要一枚目标硬币。');
     }
 
     return definition;
