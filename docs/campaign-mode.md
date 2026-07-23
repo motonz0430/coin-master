@@ -28,9 +28,10 @@ assets/resources/game/
 └── modes/
     └── campaign/
         └── levels/
+            └── level_001.json
 ```
 
-`campaign/levels/` 目前刻意留空。真正的 `level_001.json` 应在明确第一关的生命值、硬币位置和黑龙位置后创建，不能从基础测试样板直接改名冒充。
+`campaign/levels/level_001.json` 是正式第一关：3 点生命，玩家硬币位于下方中央，两枚目标硬币分别位于桌面中央和右上方，不包含黑龙障碍物。
 
 ## 闯关模式规则
 

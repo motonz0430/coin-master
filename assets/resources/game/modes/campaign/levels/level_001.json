@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "contentType": "campaign-level",
+  "id": "level_001",
+  "displayName": "第一关",
+  "startingLives": 3,
+  "table": {
+    "prefabId": "table.purple-round",
+    "position": [0, -0.9, 0],
+    "scale": [57.2, 0.9, 57.2],
+    "radius": 28.6
+  },
+  "coins": {
+    "prefabId": "coin.gold",
+    "scale": [3.36, 0.12, 3.36],
+    "radius": 1.68,
+    "height": 0.24,
+    "player": {
+      "id": "player",
+      "position": [0, 0.2, 20]
+    },
+    "targets": [
+      {
+        "id": "target_1",
+        "position": [0, 0.2, 0]
+      },
+      {
+        "id": "target_2",
+        "position": [10, 0.2, -10]
+      }
+    ]
+  },
+  "obstacles": {
+    "mode": "fixed",
+    "placements": []
+  },
+  "camera": {
+    "backDistance": 31,
+    "height": 42,
+    "lookAhead": 13.25,
+    "lookHeight": 0.25
+  }
+}

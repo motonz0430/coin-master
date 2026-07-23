@@ -121,9 +121,9 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "gameMode": 0,
+    "gameMode": 1,
     "sandboxSetupResourcePath": "game/setups/core_gameplay",
-    "campaignLevelResourcePath": "",
+    "campaignLevelResourcePath": "game/modes/campaign/levels/level_001",
     "cameraDragDegreesPerScreen": 72,
     "chargeZoneHeightRatio": 0.19,
     "_id": "94GYPNCThCPaq0NuMkFPH5"

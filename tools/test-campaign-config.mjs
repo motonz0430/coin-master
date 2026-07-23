@@ -71,6 +71,20 @@ const parsed = campaignConfig.parseCampaignLevelDefinition(validLevel);
 assert.equal(parsed.startingLives, 3);
 assert.equal(parsed.obstacles.mode, 'fixed');
 
+const level001 = JSON.parse(fs.readFileSync(
+  path.join(
+    projectRoot,
+    'assets/resources/game/modes/campaign/levels/level_001.json',
+  ),
+  'utf8',
+));
+const parsedLevel001 = campaignConfig.parseCampaignLevelDefinition(level001);
+assert.equal(parsedLevel001.id, 'level_001');
+assert.equal(parsedLevel001.startingLives, 3);
+assert.equal(parsedLevel001.coins.targets.length, 2);
+assert.equal(parsedLevel001.obstacles.mode, 'fixed');
+assert.equal(parsedLevel001.obstacles.placements.length, 0);
+
 assert.throws(
   () => campaignConfig.parseCampaignLevelDefinition({
     ...validLevel,

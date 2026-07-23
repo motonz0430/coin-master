@@ -125,6 +125,8 @@ export class CoinFlickPrototype extends Component {
     private playerCoin: Node | null = null;
     private chargeGraphics: Graphics | null = null;
     private chargeLabel: Label | null = null;
+    private campaignLivesLabel: Label | null = null;
+    private campaignOutcomeLabel: Label | null = null;
 
     private cameraYawDegrees = 0;
     private lastDragX = 0;
@@ -443,7 +445,7 @@ export class CoinFlickPrototype extends Component {
 
         const helpNode = new Node('CameraHelp');
         helpNode.layer = uiLayer;
-        helpNode.setPosition(0, visibleSize.height * 0.5 - 62, 0);
+        helpNode.setPosition(0, visibleSize.height * 0.5 - 96, 0);
         canvasNode.addChild(helpNode);
         helpNode.addComponent(UITransform).setContentSize(visibleSize.width - 48, 56);
         const helpLabel = helpNode.addComponent(Label);
@@ -453,6 +455,31 @@ export class CoinFlickPrototype extends Component {
         helpLabel.color = new Color(235, 240, 242, 230);
         helpLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
         helpLabel.verticalAlign = VerticalTextAlignment.CENTER;
+
+        const livesNode = new Node('CampaignLives');
+        livesNode.layer = uiLayer;
+        livesNode.setPosition(0, visibleSize.height * 0.5 - 48, 0);
+        canvasNode.addChild(livesNode);
+        livesNode.addComponent(UITransform).setContentSize(visibleSize.width - 48, 48);
+        this.campaignLivesLabel = livesNode.addComponent(Label);
+        this.campaignLivesLabel.string = '';
+        this.campaignLivesLabel.fontSize = 30;
+        this.campaignLivesLabel.lineHeight = 38;
+        this.campaignLivesLabel.color = new Color(255, 224, 130, 255);
+        this.campaignLivesLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
+        this.campaignLivesLabel.verticalAlign = VerticalTextAlignment.CENTER;
+
+        const outcomeNode = new Node('CampaignOutcome');
+        outcomeNode.layer = uiLayer;
+        outcomeNode.setPosition(0, visibleSize.height * 0.18, 0);
+        canvasNode.addChild(outcomeNode);
+        outcomeNode.addComponent(UITransform).setContentSize(visibleSize.width - 64, 72);
+        this.campaignOutcomeLabel = outcomeNode.addComponent(Label);
+        this.campaignOutcomeLabel.string = '';
+        this.campaignOutcomeLabel.fontSize = 46;
+        this.campaignOutcomeLabel.lineHeight = 56;
+        this.campaignOutcomeLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
+        this.campaignOutcomeLabel.verticalAlign = VerticalTextAlignment.CENTER;
 
         const zoneDiameter = Math.min(196, visibleSize.width * 0.29);
         const zoneNode = new Node('ChargeZone');
@@ -691,6 +718,12 @@ export class CoinFlickPrototype extends Component {
                 onOutcomeChanged: (outcome) => this.onCampaignOutcomeChanged(outcome),
             },
         );
+        if (this.campaignLivesLabel) {
+            this.campaignLivesLabel.string = `生命：${definition.startingLives}/${definition.startingLives}`;
+        }
+        if (this.campaignOutcomeLabel) {
+            this.campaignOutcomeLabel.string = '';
+        }
 
         const playerCollider = this.playerCoin.getComponent(CylinderCollider);
         if (!playerCollider) throw new Error('闯关模式的玩家硬币缺少碰撞体。');
@@ -725,6 +758,12 @@ export class CoinFlickPrototype extends Component {
         this.campaignSession = null;
         this.campaignTargets = [];
         this.campaignShotElapsed = 0;
+        if (this.campaignLivesLabel) {
+            this.campaignLivesLabel.string = '';
+        }
+        if (this.campaignOutcomeLabel) {
+            this.campaignOutcomeLabel.string = '';
+        }
     }
 
     private onCampaignPlayerCollisionEnter(event?: ICollisionEvent): void {
@@ -853,6 +892,9 @@ export class CoinFlickPrototype extends Component {
         reason: CampaignLifeLossReason,
     ): void {
         const reasonLabel = reason === 'shot-missed' ? '未命中任何目标' : '命中目标掉出桌外';
+        if (this.campaignLivesLabel) {
+            this.campaignLivesLabel.string = `生命：${currentLives}/${startingLives}`;
+        }
         console.info(
             `[闯关模式] ${reasonLabel}，生命 ${currentLives}/${startingLives}。`,
         );
@@ -860,11 +902,18 @@ export class CoinFlickPrototype extends Component {
 
     private onCampaignOutcomeChanged(outcome: CampaignOutcome): void {
         if (outcome === 'failed') {
-            // Failure UI is intentionally deferred until its separate UI specification.
+            if (this.campaignOutcomeLabel) {
+                this.campaignOutcomeLabel.string = '本关失败';
+                this.campaignOutcomeLabel.color = new Color(255, 112, 98, 255);
+            }
             console.info('[闯关模式] 本关失败；失败界面 UI 等待后续接入。');
             return;
         }
         if (outcome === 'succeeded') {
+            if (this.campaignOutcomeLabel) {
+                this.campaignOutcomeLabel.string = '闯关成功';
+                this.campaignOutcomeLabel.color = new Color(255, 224, 92, 255);
+            }
             console.info('[闯关模式] 所有目标均已消失，本关成功。');
         }
     }
