@@ -85,6 +85,43 @@ assert.equal(parsedLevel001.coins.targets.length, 2);
 assert.equal(parsedLevel001.obstacles.mode, 'fixed');
 assert.equal(parsedLevel001.obstacles.placements.length, 0);
 
+const level002 = JSON.parse(fs.readFileSync(
+  path.join(
+    projectRoot,
+    'assets/resources/game/modes/campaign/levels/level_002.json',
+  ),
+  'utf8',
+));
+const parsedLevel002 = campaignConfig.parseCampaignLevelDefinition(level002);
+assert.equal(parsedLevel002.id, 'level_002');
+assert.equal(parsedLevel002.startingLives, 3);
+assert.equal(parsedLevel002.coins.targets.length, 2);
+assert.deepEqual(
+  [...parsedLevel002.coins.player.position],
+  [0, 0.2, 20],
+);
+assert.deepEqual(
+  parsedLevel002.coins.targets.map((target) => [...target.position]),
+  [
+    [0, 0.2, -6.7],
+    [9.1, 0.2, 2.6],
+  ],
+);
+assert.equal(parsedLevel002.obstacles.mode, 'fixed');
+assert.equal(parsedLevel002.obstacles.placements.length, 1);
+assert.equal(
+  parsedLevel002.obstacles.placements[0].prefabId,
+  'obstacle.dragon-column',
+);
+assert.deepEqual(
+  [...parsedLevel002.obstacles.placements[0].position],
+  [0, 1.9, 2.6],
+);
+assert.deepEqual(
+  [...parsedLevel002.obstacles.placements[0].scale],
+  [5.2, 1.9, 5.2],
+);
+
 assert.throws(
   () => campaignConfig.parseCampaignLevelDefinition({
     ...validLevel,

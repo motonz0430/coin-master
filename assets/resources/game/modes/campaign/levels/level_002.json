@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "contentType": "campaign-level",
+  "id": "level_002",
+  "displayName": "第二关",
+  "startingLives": 3,
+  "table": {
+    "prefabId": "table.purple-round",
+    "position": [0, -0.9, 0],
+    "scale": [57.2, 0.9, 57.2],
+    "radius": 28.6
+  },
+  "coins": {
+    "prefabId": "coin.gold",
+    "scale": [3.36, 0.12, 3.36],
+    "radius": 1.68,
+    "height": 0.24,
+    "player": {
+      "id": "player",
+      "position": [0, 0.2, 20]
+    },
+    "targets": [
+      {
+        "id": "target_1",
+        "position": [0, 0.2, -6.7]
+      },
+      {
+        "id": "target_2",
+        "position": [9.1, 0.2, 2.6]
+      }
+    ]
+  },
+  "obstacles": {
+    "mode": "fixed",
+    "placements": [
+      {
+        "id": "dragon_1",
+        "prefabId": "obstacle.dragon-column",
+        "position": [0, 1.9, 2.6],
+        "scale": [5.2, 1.9, 5.2],
+        "rotationY": 0
+      }
+    ]
+  },
+  "camera": {
+    "backDistance": 31,
+    "height": 42,
+    "lookAhead": 13.25,
+    "lookHeight": 0.25
+  }
+}
