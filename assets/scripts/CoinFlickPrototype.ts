@@ -203,9 +203,9 @@ export class CoinFlickPrototype extends Component {
 
     private configureScenePhysics(): void {
         const table = this.requireSceneNode('Table');
-        // Cocos' built-in cylinder has a radius of 0.5, so diameter scale is
-        // required to produce the requested world-space table radius.
-        table.setScale(this.tableRadius * 2, 0.18, this.tableRadius * 2);
+        // Keep all three table axes in the 5x world. Leaving Y at the old 0.18
+        // lowers the tabletop to -0.72, beneath the obstacle colliders at Y=0.
+        table.setScale(this.tableRadius * 2, 0.18 * WORLD_SCALE, this.tableRadius * 2);
         const tableCollider = table.getComponent(CylinderCollider) ?? table.addComponent(CylinderCollider);
         tableCollider.radius = 0.5;
         tableCollider.height = 2;
