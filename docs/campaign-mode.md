@@ -30,7 +30,8 @@ assets/resources/game/
         └── levels/
             ├── level_001.json
             ├── level_002.json
-            └── level_003.json
+            ├── level_003.json
+            └── level_004.json
 ```
 
 `campaign/levels/level_001.json` 是正式第一关：3 点生命，玩家硬币位于下方中央，两枚目标硬币分别位于桌面中央和右上方，不包含黑龙障碍物。
@@ -38,6 +39,8 @@ assets/resources/game/
 `campaign/levels/level_002.json` 是正式第二关：3 点生命，玩家硬币位于下方中央，两枚目标硬币分别位于中上方和右侧；一只固定黑龙位于桌面中央偏下，布局比例来自第二关草图。
 
 `campaign/levels/level_003.json` 是正式第三关：3 点生命，玩家硬币位于下方中央，三枚目标硬币分布在左上、右上和中央偏右；两只固定黑龙分布在桌面中央区域，布局比例来自第三关草图。
+
+`campaign/levels/level_004.json` 是正式第四关：3 点生命，玩家硬币位于右下方，五枚目标硬币分布在上方、左侧、中央、右侧和左下方；四只固定黑龙分布在桌面中央区域，布局比例来自第四关草图。
 
 ## 闯关模式规则
 

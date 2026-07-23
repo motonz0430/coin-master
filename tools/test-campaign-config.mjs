@@ -170,6 +170,68 @@ assert.deepEqual(
   ],
 );
 
+const level004 = JSON.parse(fs.readFileSync(
+  path.join(
+    projectRoot,
+    'assets/resources/game/modes/campaign/levels/level_004.json',
+  ),
+  'utf8',
+));
+const parsedLevel004 = campaignConfig.parseCampaignLevelDefinition(level004);
+assert.equal(parsedLevel004.id, 'level_004');
+assert.equal(parsedLevel004.startingLives, 3);
+assert.equal(parsedLevel004.coins.targets.length, 5);
+assert.deepEqual(
+  [...parsedLevel004.coins.player.position],
+  [12.2, 0.2, 19.5],
+);
+assert.deepEqual(
+  parsedLevel004.coins.targets.map((target) => [...target.position]),
+  [
+    [6, 0.2, -16.2],
+    [-9, 0.2, -6.7],
+    [0.7, 0.2, 0.8],
+    [11.3, 0.2, -2.1],
+    [-6.3, 0.2, 17.5],
+  ],
+);
+assert.equal(parsedLevel004.obstacles.mode, 'fixed');
+assert.equal(parsedLevel004.obstacles.placements.length, 4);
+assert.deepEqual(
+  parsedLevel004.obstacles.placements.map((obstacle) => ({
+    prefabId: obstacle.prefabId,
+    position: [...obstacle.position],
+    scale: [...obstacle.scale],
+    rotationY: obstacle.rotationY,
+  })),
+  [
+    {
+      prefabId: 'obstacle.dragon-column',
+      position: [-1.3, 1.9, -7.1],
+      scale: [5.2, 1.9, 5.2],
+      rotationY: 27,
+    },
+    {
+      prefabId: 'obstacle.dragon-column',
+      position: [17.1, 1.9, -2.1],
+      scale: [5.2, 1.9, 5.2],
+      rotationY: -13,
+    },
+    {
+      prefabId: 'obstacle.dragon-column',
+      position: [10.1, 1.9, 3.4],
+      scale: [5.2, 1.9, 5.2],
+      rotationY: 7,
+    },
+    {
+      prefabId: 'obstacle.dragon-column',
+      position: [-1.3, 1.9, 9.5],
+      scale: [5.2, 1.9, 5.2],
+      rotationY: 54,
+    },
+  ],
+);
+
 assert.throws(
   () => campaignConfig.parseCampaignLevelDefinition({
     ...validLevel,
