@@ -97,7 +97,7 @@ export function sampleChargeCurve(points: ChargeCurvePoint[], chargeSeconds: num
 export function createDefaultChargeCurve(): ChargeCurvePoint[] {
     const maxSeconds = 2.2;
     const minImpulse = 1;
-    const maxImpulse = 10;
+    const maxImpulse = 15;
     const pointCount = Math.round(maxSeconds / TIME_STEP_SECONDS);
     const points: ChargeCurvePoint[] = [];
 
