@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "level_001",
+  "displayName": "基础玩法",
+  "table": {
+    "prefabId": "table.purple-round",
+    "position": [0, -0.9, 0],
+    "scale": [57.2, 0.9, 57.2],
+    "radius": 28.6
+  },
+  "coins": {
+    "prefabId": "coin.gold",
+    "scale": [3.36, 0.12, 3.36],
+    "radius": 1.68,
+    "height": 0.24,
+    "player": {
+      "id": "player",
+      "position": [0, 0.2, 19.25]
+    },
+    "targets": [
+      {
+        "id": "target_1",
+        "position": [0, 0.2, 8.25]
+      },
+      {
+        "id": "target_2",
+        "position": [-5.5, 0.2, -2.25]
+      },
+      {
+        "id": "target_3",
+        "position": [5.25, 0.2, -12]
+      }
+    ]
+  },
+  "obstacles": {
+    "mode": "random",
+    "prefabId": "obstacle.dragon-column",
+    "minCount": 3,
+    "maxCount": 7,
+    "radiusRange": [1.2, 1.7],
+    "heightRange": [2.9, 4.6],
+    "tableEdgePadding": 2.4,
+    "coinClearance": 2.6,
+    "obstacleClearance": 2.1,
+    "placementAttempts": 80
+  },
+  "camera": {
+    "backDistance": 31,
+    "height": 42,
+    "lookAhead": 13.25,
+    "lookHeight": 0.25
+  }
+}

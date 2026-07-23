@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "assets": {
+    "table.purple-round": "game/prefabs/TablePurpleRound",
+    "coin.gold": "game/prefabs/GoldCoin",
+    "obstacle.dragon-column": "game/prefabs/DragonColumn"
+  }
+}

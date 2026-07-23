@@ -13,16 +13,13 @@ import {
     HorizontalTextAlignment,
     input,
     Input,
-    instantiate,
     Label,
     Layers,
     Material,
     MeshRenderer,
     Node,
-    Prefab,
     PhysicsMaterial,
     PhysicsSystem,
-    primitives,
     profiler,
     resources,
     RigidBody,
@@ -30,7 +27,6 @@ import {
     TextAsset,
     Texture2D,
     UITransform,
-    utils,
     Vec3,
     VerticalTextAlignment,
     view,
@@ -42,6 +38,9 @@ import {
     sampleChargeCurve,
 } from './ChargeCurveTable';
 import type { ChargeCurvePoint } from './ChargeCurveTable';
+import { buildLevel, loadLevelDefinition } from './level/LevelBuilder';
+import type { CameraDefinition, LevelDefinition } from './level/LevelConfig';
+import { PrefabAssetLibrary } from './level/PrefabAssetLibrary';
 
 const { ccclass, property } = _decorator;
 
@@ -56,7 +55,8 @@ type GestureMode = 'none' | 'camera' | 'charge';
 /**
  * 《羊蹄山之魂》式弹钱币操作原型。
  *
- * - 圆桌、硬币、障碍物、摄像机和灯光都直接保存在 Main.scene 中。
+ * - Main.scene 只保存摄像机、灯光和可视化编辑预览。
+ * - 桌面、硬币和障碍物由关卡配置从共享 Prefab 资产库生成。
  * - 玩家只控制黄色硬币。
  * - 屏幕主体左右拖拽，镜头围绕玩家硬币旋转。
  * - 镜头正前方就是硬币发射方向。
@@ -71,17 +71,21 @@ export class CoinFlickPrototype extends Component {
     @property({ tooltip: '底部蓄力热区占屏幕高度的比例' })
     public chargeZoneHeightRatio = 0.19;
 
-    @property({ tooltip: '每局最少出现的圆柱障碍物数量' })
-    public minObstacleCount = 3;
+    @property({ tooltip: 'resources 下的关卡配置路径，不包含扩展名' })
+    public levelResourcePath = 'game/levels/level_001';
 
-    @property({ tooltip: '每局最多出现的圆柱障碍物数量' })
-    public maxObstacleCount = 7;
-
-    private readonly coinRadius = 0.336 * WORLD_SCALE;
-    private readonly coinHeight = 0.048 * WORLD_SCALE;
-    private readonly tableRadius = 5.72 * WORLD_SCALE;
+    private coinRadius = 0.336 * WORLD_SCALE;
+    private coinHeight = 0.048 * WORLD_SCALE;
+    private tableRadius = 5.72 * WORLD_SCALE;
+    private cameraDefinition: CameraDefinition = {
+        backDistance: 6.2 * WORLD_SCALE,
+        height: 8.4 * WORLD_SCALE,
+        lookAhead: 2.65 * WORLD_SCALE,
+        lookHeight: 0.05 * WORLD_SCALE,
+    };
 
     private camera: Camera | null = null;
+    private table: Node | null = null;
     private playerCoin: Node | null = null;
     private chargeGraphics: Graphics | null = null;
     private chargeLabel: Label | null = null;
@@ -108,15 +112,10 @@ export class CoinFlickPrototype extends Component {
         physicsSystem.gravity = new Vec3(0, -9.8 * WORLD_SCALE, 0);
         this.loadChargeCurveTable();
 
-        this.ensureRecoveredVisuals();
-        this.bindVisualScene();
-        this.configureScenePhysics();
-        this.applySceneMaterials();
-        this.attachCoinFaces();
-        this.attachDragonVisuals();
-        this.configureLightingAndShadows();
+        this.bindBootstrapScene();
         this.createUserInterface();
         this.updateCameraRig();
+        void this.loadConfiguredLevel();
 
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
@@ -143,7 +142,7 @@ export class CoinFlickPrototype extends Component {
         this.updateCameraRig();
     }
 
-    private bindVisualScene(): void {
+    private bindBootstrapScene(): void {
         const cameraNode = this.requireSceneNode('MainCamera');
         const camera = cameraNode.getComponent(Camera) ?? cameraNode.addComponent(Camera);
         camera.projection = Camera.ProjectionType.PERSPECTIVE;
@@ -168,62 +167,58 @@ export class CoinFlickPrototype extends Component {
         light.shadowNear = 0.1 * WORLD_SCALE;
         light.shadowFar = 20 * WORLD_SCALE;
         light.shadowOrthoSize = 7.2 * WORLD_SCALE;
-
-        this.playerCoin = this.requireSceneNode('Coin_Player');
     }
 
-    /**
-     * The original scene serialization was lost when the ChatGPT project mirror
-     * was recreated. The recovered Main.scene keeps every editable gameplay
-     * node, while this method restores their built-in meshes deterministically.
-     */
-    private ensureRecoveredVisuals(): void {
-        const table = this.requireSceneNode('Table');
-        this.ensureCylinderMesh(table, 64);
+    private async loadConfiguredLevel(): Promise<void> {
+        try {
+            const [definition, library] = await Promise.all([
+                loadLevelDefinition(this.levelResourcePath),
+                PrefabAssetLibrary.create(),
+            ]);
+            const builtLevel = await buildLevel(this.node, definition, library);
+            this.applyLevelDefinition(definition);
+            this.table = builtLevel.table;
+            this.playerCoin = builtLevel.playerCoin;
+            this.obstacles = [...builtLevel.obstacles];
 
-        ['Coin_Player', 'Coin_Target_1', 'Coin_Target_2', 'Coin_Target_3'].forEach((name) => {
-            this.ensureCylinderMesh(this.requireSceneNode(name), 48);
-        });
-
-        for (let index = 1; index <= 8; index++) {
-            const obstacle = this.requireSceneNode(`Obstacle_${index}`);
-            if (!obstacle.getChildByName('DragonColumnVisual')) {
-                this.ensureCylinderMesh(obstacle, 28);
-            }
+            this.configureScenePhysics(builtLevel.targetCoins);
+            this.applySceneMaterials(builtLevel.targetCoins);
+            this.configureLightingAndShadows(builtLevel.targetCoins);
+            this.updateCameraRig();
+            console.info(`[关卡] 已从 Prefab 资产库载入 ${definition.id}：${definition.displayName}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`[关卡] 加载失败：${message}`);
         }
     }
 
-    private ensureCylinderMesh(node: Node, radialSegments: number): MeshRenderer {
-        const renderer = node.getComponent(MeshRenderer) ?? node.addComponent(MeshRenderer);
-        if (!renderer.mesh) {
-            renderer.mesh = utils.createMesh(primitives.cylinder(0.5, 0.5, 2, { radialSegments }));
-        }
-        return renderer;
+    private applyLevelDefinition(definition: LevelDefinition): void {
+        this.coinRadius = definition.coins.radius;
+        this.coinHeight = definition.coins.height;
+        this.tableRadius = definition.table.radius;
+        this.cameraDefinition = definition.camera;
     }
 
-    private configureScenePhysics(): void {
-        const table = this.requireSceneNode('Table');
-        // Keep all three table axes in the 5x world. Leaving Y at the old 0.18
-        // lowers the tabletop to -0.72, beneath the obstacle colliders at Y=0.
-        table.setScale(this.tableRadius * 2, 0.18 * WORLD_SCALE, this.tableRadius * 2);
-        const tableCollider = table.getComponent(CylinderCollider) ?? table.addComponent(CylinderCollider);
+    private configureScenePhysics(targetCoins: readonly Node[]): void {
+        if (!this.table || !this.playerCoin) {
+            throw new Error('关卡构建完成后缺少桌面或玩家硬币。');
+        }
+
+        const tableBody = this.table.getComponent(RigidBody) ?? this.table.addComponent(RigidBody);
+        tableBody.type = ERigidBodyType.STATIC;
+        tableBody.useGravity = false;
+        const tableCollider = this.table.getComponent(CylinderCollider) ?? this.table.addComponent(CylinderCollider);
         tableCollider.radius = 0.5;
         tableCollider.height = 2;
         tableCollider.material = this.createPhysicsMaterial(0.45, 0.05);
 
         this.coinBodies = [];
-        this.configureCoinPhysics('Coin_Player');
-        this.configureCoinPhysics('Coin_Target_1');
-        this.configureCoinPhysics('Coin_Target_2');
-        this.configureCoinPhysics('Coin_Target_3');
-
-        this.configureRandomObstacles();
+        this.configureCoinPhysics(this.playerCoin);
+        targetCoins.forEach((coin) => this.configureCoinPhysics(coin));
+        this.obstacles.forEach((obstacle) => this.configureObstaclePhysics(obstacle));
     }
 
-    private configureCoinPhysics(name: string): void {
-        const coin = this.requireSceneNode(name);
-        coin.setScale(this.coinRadius * 2, this.coinHeight * 0.5, this.coinRadius * 2);
-
+    private configureCoinPhysics(coin: Node): void {
         const body = coin.getComponent(RigidBody) ?? coin.addComponent(RigidBody);
         body.type = ERigidBodyType.DYNAMIC;
         body.mass = 1;
@@ -245,6 +240,18 @@ export class CoinFlickPrototype extends Component {
         body.useCCD = true;
 
         this.coinBodies.push({ node: coin, body, isFalling: false });
+    }
+
+    private configureObstaclePhysics(obstacle: Node): void {
+        const body = obstacle.getComponent(RigidBody) ?? obstacle.addComponent(RigidBody);
+        body.type = ERigidBodyType.STATIC;
+        body.useGravity = false;
+
+        const collider = obstacle.getComponent(CylinderCollider) ?? obstacle.addComponent(CylinderCollider);
+        collider.center = Vec3.ZERO;
+        collider.radius = 0.5;
+        collider.height = 2;
+        collider.material = this.createPhysicsMaterial(0.2, 0.78);
     }
 
     private updateCoinFallRotation(): void {
@@ -278,81 +285,12 @@ export class CoinFlickPrototype extends Component {
         }
     }
 
-    private configureRandomObstacles(): void {
-        this.obstacles = Array.from({ length: 8 }, (_, index) => (
-            this.requireSceneNode(`Obstacle_${index + 1}`)
-        ));
+    private applySceneMaterials(targetCoins: readonly Node[]): void {
+        if (!this.table || !this.playerCoin) return;
 
-        const minimum = Math.max(0, Math.min(this.obstacles.length, Math.floor(this.minObstacleCount)));
-        const maximum = Math.max(minimum, Math.min(this.obstacles.length, Math.floor(this.maxObstacleCount)));
-        const activeCount = minimum + Math.floor(Math.random() * (maximum - minimum + 1));
-
-        const occupied: Array<{ x: number; z: number; clearance: number }> = [
-            'Coin_Player',
-            'Coin_Target_1',
-            'Coin_Target_2',
-            'Coin_Target_3',
-        ].map((name) => {
-            const position = this.requireSceneNode(name).position;
-            return { x: position.x, z: position.z, clearance: this.coinRadius + 0.52 * WORLD_SCALE };
-        });
-
-        this.obstacles.forEach((obstacle, index) => {
-            const isActive = index < activeCount;
-            obstacle.active = isActive;
-            if (!isActive) return;
-
-            const radius = this.randomRange(0.24, 0.34) * WORLD_SCALE;
-            const height = this.randomRange(0.58, 0.92) * WORLD_SCALE;
-            const position = this.findObstaclePosition(radius, occupied);
-            obstacle.setPosition(position.x, height * 0.5, position.z);
-            obstacle.setScale(radius * 2, height * 0.5, radius * 2);
-
-            const playerPosition = this.playerCoin?.position ?? Vec3.ZERO;
-            const facePlayerYaw = Math.atan2(
-                playerPosition.x - position.x,
-                playerPosition.z - position.z,
-            ) * 180 / Math.PI;
-            obstacle.setRotationFromEuler(0, facePlayerYaw, 0);
-
-            const collider = obstacle.getComponent(CylinderCollider) ?? obstacle.addComponent(CylinderCollider);
-            collider.radius = 0.5;
-            collider.height = 2;
-            collider.material = this.createPhysicsMaterial(0.2, 0.78);
-
-            occupied.push({ x: position.x, z: position.z, clearance: radius + 0.42 * WORLD_SCALE });
-        });
-    }
-
-    private findObstaclePosition(
-        radius: number,
-        occupied: Array<{ x: number; z: number; clearance: number }>,
-    ): { x: number; z: number } {
-        const usableRadius = this.tableRadius - radius - 0.48 * WORLD_SCALE;
-        for (let attempt = 0; attempt < 80; attempt++) {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = Math.sqrt(Math.random()) * usableRadius;
-            const x = Math.cos(angle) * distance;
-            const z = Math.sin(angle) * distance;
-            const overlaps = occupied.some((item) => {
-                const dx = x - item.x;
-                const dz = z - item.z;
-                return dx * dx + dz * dz < item.clearance * item.clearance;
-            });
-            if (!overlaps) return { x, z };
-        }
-
-        return { x: 0, z: 0 };
-    }
-
-    private randomRange(minimum: number, maximum: number): number {
-        return minimum + Math.random() * (maximum - minimum);
-    }
-
-    private applySceneMaterials(): void {
-        // Keep the TableVisual material serialized in Main.scene. Replacing it
-        // here used to discard the texture already assigned by Creator.
-        const tableRenderer = this.requireSceneNode('Table').getComponent(MeshRenderer);
+        // Prefer materials embedded in the shared Prefab and only create a
+        // fallback if an asset was accidentally detached in the editor.
+        const tableRenderer = this.table.getComponent(MeshRenderer);
         const tableMaterial = tableRenderer?.getMaterialInstance(0);
         if (tableMaterial) {
             this.applyTableTexture(tableMaterial);
@@ -363,76 +301,9 @@ export class CoinFlickPrototype extends Component {
         }
 
         const goldEdge = this.getMaterial('gold-edge', new Color(222, 168, 38, 255), 0.72, 0.3);
-        ['Coin_Player', 'Coin_Target_1', 'Coin_Target_2', 'Coin_Target_3'].forEach((name) => {
-            this.setNodeMaterial(name, goldEdge);
-        });
-
-        const obstacleMaterial = this.getMaterial('obstacle-fallback', new Color(28, 38, 58, 255), 0.42, 0.36);
-        this.obstacles.forEach((obstacle) => this.setNodeMaterial(obstacle.name, obstacleMaterial));
-    }
-
-    private attachCoinFaces(): void {
-        resources.load('textures/fantasy-gold-coin-face/texture/texture', Texture2D, (error, texture) => {
-            if (error || !texture) {
-                console.warn('无法载入魔幻金币贴图', error);
-                return;
-            }
-
-            const faceMaterial = new Material();
-            faceMaterial.initialize({
-                effectName: 'builtin-unlit',
-                technique: 1,
-                defines: { USE_TEXTURE: true },
-            });
-            faceMaterial.setProperty('mainTexture', texture);
-            faceMaterial.setProperty('mainColor', Color.WHITE);
-
-            ['Coin_Player', 'Coin_Target_1', 'Coin_Target_2', 'Coin_Target_3'].forEach((name) => {
-                const coin = this.requireSceneNode(name);
-                const recoveredFace = coin.getChildByName('CoinFace');
-                if (recoveredFace) {
-                    // The built-in plane saved in Main.scene is 10 x 10,
-                    // unlike the 1 x 1 plane created below at runtime.
-                    recoveredFace.setScale(0.0965, 1, 0.0965);
-                    return;
-                }
-
-                const face = new Node('CoinFace');
-                face.setPosition(0, 1.04, 0);
-                face.setScale(0.965, 1, 0.965);
-                coin.addChild(face);
-
-                const renderer = face.addComponent(MeshRenderer);
-                renderer.mesh = utils.createMesh(primitives.plane({
-                    width: 1,
-                    length: 1,
-                    widthSegments: 1,
-                    lengthSegments: 1,
-                }));
-                renderer.setMaterial(faceMaterial, 0);
-                renderer.receiveShadowForInspector = true;
-            });
-        });
-    }
-
-    private attachDragonVisuals(): void {
-        resources.loadDir('models/dragon-column', Prefab, (error, prefabs) => {
-            const dragonPrefab = prefabs?.[0];
-            if (error || !dragonPrefab) {
-                console.warn('无法载入黑龙柱模型，保留圆柱障碍物作为后备显示。', error);
-                return;
-            }
-
-            this.obstacles.forEach((obstacle) => {
-                if (obstacle.getChildByName('DragonColumnVisual')) return;
-                const visual = instantiate(dragonPrefab);
-                visual.name = 'DragonColumnVisual';
-                visual.setPosition(Vec3.ZERO);
-                obstacle.addChild(visual);
-                const placeholderRenderer = obstacle.getComponent(MeshRenderer);
-                if (placeholderRenderer) placeholderRenderer.enabled = false;
-                this.configureNodeShadows(visual, true, true);
-            });
+        [this.playerCoin, ...targetCoins].forEach((coin) => {
+            const renderer = coin.getComponent(MeshRenderer);
+            if (!renderer?.getSharedMaterial(0)) renderer?.setSharedMaterial(goldEdge, 0);
         });
     }
 
@@ -450,7 +321,7 @@ export class CoinFlickPrototype extends Component {
         });
     }
 
-    private configureLightingAndShadows(): void {
+    private configureLightingAndShadows(targetCoins: readonly Node[]): void {
         const scene = director.getScene();
         if (scene) {
             const shadows = scene.globals.shadows;
@@ -467,10 +338,9 @@ export class CoinFlickPrototype extends Component {
             ambient.skyIllum = 10000;
         }
 
-        this.configureNodeShadows(this.requireSceneNode('Table'), false, true);
-        ['Coin_Player', 'Coin_Target_1', 'Coin_Target_2', 'Coin_Target_3'].forEach((name) => {
-            this.configureNodeShadows(this.requireSceneNode(name), true, true);
-        });
+        if (this.table) this.configureNodeShadows(this.table, false, true);
+        if (this.playerCoin) this.configureNodeShadows(this.playerCoin, true, true);
+        targetCoins.forEach((coin) => this.configureNodeShadows(coin, true, true));
         this.obstacles.forEach((obstacle) => this.configureNodeShadows(obstacle, true, true));
     }
 
@@ -482,10 +352,6 @@ export class CoinFlickPrototype extends Component {
             renderer.shadowBias = 0.00015;
             renderer.shadowNormalBias = 0.006 * WORLD_SCALE;
         });
-    }
-
-    private setNodeMaterial(name: string, material: Material): void {
-        this.requireSceneNode(name).getComponent(MeshRenderer)?.setMaterial(material, 0);
     }
 
     private requireSceneNode(name: string): Node {
@@ -645,11 +511,11 @@ export class CoinFlickPrototype extends Component {
         const forward = this.getLaunchDirection(new Vec3());
         const playerPosition = this.playerCoin.worldPosition;
         const cameraPosition = playerPosition.clone()
-            .subtract(forward.clone().multiplyScalar(6.2 * WORLD_SCALE))
-            .add3f(0, 8.4 * WORLD_SCALE, 0);
+            .subtract(forward.clone().multiplyScalar(this.cameraDefinition.backDistance))
+            .add3f(0, this.cameraDefinition.height, 0);
         const lookTarget = playerPosition.clone()
-            .add(forward.clone().multiplyScalar(2.65 * WORLD_SCALE))
-            .add3f(0, 0.05 * WORLD_SCALE, 0);
+            .add(forward.clone().multiplyScalar(this.cameraDefinition.lookAhead))
+            .add3f(0, this.cameraDefinition.lookHeight, 0);
 
         this.camera.node.setWorldPosition(cameraPosition);
         this.camera.node.lookAt(lookTarget, Vec3.UP);

@@ -204,17 +204,22 @@ const scriptId = add({
   node: { __id__: gameRootId },
   _enabled: true,
   __prefab: null,
+  levelResourcePath: 'game/levels/level_001',
   cameraDragDegreesPerScreen: 72,
   chargeZoneHeightRatio: 0.19,
-  minObstacleCount: 3,
-  maxObstacleCount: 7,
   _id: '94GYPNCThCPaq0NuMkFPH5',
 });
 scene[gameRootId]._components.push({ __id__: scriptId });
 
+const editorPreviewId = addNode({
+  name: 'EditorPreview',
+  parent: gameRootId,
+  id: 'EditorPreviewNode',
+});
+
 const tableId = addNode({
   name: 'Table',
-  parent: gameRootId,
+  parent: editorPreviewId,
   position: world([0, -0.18, 0]),
   scale: world([11.44, 0.18, 11.44]),
   id: 'TableRecoveredNode',
@@ -229,7 +234,7 @@ addMeshRenderer(tableId, UUID.cylinderMesh, UUID.tableMaterial, { cast: false, r
 ].forEach(([name, position]) => {
   const coinId = addNode({
     name,
-    parent: gameRootId,
+    parent: editorPreviewId,
     position: world(position),
     scale: world([0.672, 0.024, 0.672]),
     id: `${name.replace(/[^A-Za-z0-9]/g, '')}RecoveredNode`,
@@ -330,7 +335,7 @@ scene[lightId]._components.push({ __id__: lightComponentId });
   const index = offset + 1;
   const obstacleId = addNode({
     name: `Obstacle_${index}`,
-    parent: gameRootId,
+    parent: editorPreviewId,
     position: world(position),
     scale: world([0.56, 0.38, 0.56]),
     id: `Obstacle${index}RecoveredNode`,
