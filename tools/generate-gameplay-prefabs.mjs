@@ -7,12 +7,15 @@ const UUID = {
   tablePrefab: '147aca30-6c39-43a4-851a-49cced102431',
   coinPrefab: '5e396525-d3d7-42cd-94c0-ddc3eef28db8',
   dragonPrefab: 'aa771613-1c10-4519-a26f-0d068a3d16ad',
+  elasticPillarPrefab: '2142447e-d2bd-431c-8ba3-f6cfa7a84a10',
   cylinderMesh: '1263d74c-8167-4928-91a6-4e2672411f47@8abdc',
   planeMesh: '1263d74c-8167-4928-91a6-4e2672411f47@2e76e',
   tableMaterial: '4dd61083-638c-4df3-a81c-0f8ae35c5d90',
   coinEdgeMaterial: 'd88db13b-1b7a-4e05-9b57-b3e235005b1d',
   coinFaceMaterial: '65126e7c-5c81-45a5-abc7-61e5c8a2c375',
   dragon: 'ecb70f33-43c9-469a-b371-73f2ba757fc2',
+  elasticRubberMaterial: '4bf22c92-ebb0-4829-9c19-8145d46bf380',
+  elasticBandMaterial: '076c13b2-7a49-48bc-8487-9b1d5398b168',
 };
 
 const DIRECTORY_METAS = {
@@ -36,9 +39,16 @@ const SCRIPT_METAS = {
   'assets/scripts/gameplay/GameplayConfig.ts.meta': '405da631-e521-445d-ac69-d8b890faf288',
   'assets/scripts/gameplay/PrefabAssetLibrary.ts.meta': '7ba3d85d-4b50-4a60-8fb1-d63668601933',
   'assets/scripts/gameplay/GameplayBuilder.ts.meta': 'b3c6f5d0-0066-42a6-b6f6-f39dba5c4417',
+  'assets/scripts/gameplay/ElasticPillarPhysics.ts.meta': 'c3329e29-a09f-4015-9ce4-4c93ff69cc14',
   'assets/scripts/modes/GameMode.ts.meta': 'c6eaa599-b291-4d43-ade7-3572993a0281',
   'assets/scripts/modes/campaign/CampaignLevelConfig.ts.meta': 'd5e955d9-b9fc-49b9-8315-22cfbec44158',
   'assets/scripts/modes/campaign/CampaignSession.ts.meta': '49421354-5d6e-4136-8ddb-4256b1fba531',
+};
+
+const META_USER_DATA = {
+  'assets/scripts/modes/campaign.meta': { module: 'campaign-mode' },
+  'assets/scripts/modes/campaign/CampaignLevelConfig.ts.meta': { module: 'campaign-mode' },
+  'assets/scripts/modes/campaign/CampaignSession.ts.meta': { module: 'campaign-mode' },
 };
 
 const vec3 = (x = 0, y = 0, z = 0) => ({ __type__: 'cc.Vec3', x, y, z });
@@ -232,6 +242,69 @@ function createDragonPrefab() {
   return builder.finish();
 }
 
+function createElasticPillarPrefab() {
+  const builder = new PrefabBuilder('ElasticPillar', UUID.elasticPillarPrefab);
+  builder.addMeshRenderer(
+    builder.root,
+    UUID.cylinderMesh,
+    UUID.elasticRubberMaterial,
+    'ElasticPillarRenderer',
+    true,
+  );
+  builder.addRigidBody(builder.root, 'ElasticPillarRigidBody', { type: 2, gravity: false });
+  builder.addCylinderCollider(builder.root, 'ElasticPillarCollider');
+
+  [-0.62, 0, 0.62].forEach((y, index) => {
+    const band = builder.addNode(
+      `RubberBand_${index + 1}`,
+      builder.root,
+      `ElasticPillarBand${index + 1}Node`,
+      {
+        position: [0, y, 0],
+        scale: [1.04, 0.09, 1.04],
+      },
+    );
+    builder.addMeshRenderer(
+      band,
+      UUID.cylinderMesh,
+      UUID.elasticBandMaterial,
+      `ElasticPillarBand${index + 1}Renderer`,
+      true,
+    );
+  });
+  return builder.finish();
+}
+
+function standardMaterial(name, color, roughness, metallic = 0) {
+  return {
+    __type__: 'cc.Material',
+    _name: name,
+    _objFlags: 0,
+    _native: '',
+    _effectAsset: {
+      __uuid__: '1baf0fc9-befa-459c-8bdd-af1a450a0319',
+    },
+    _techIdx: 0,
+    _defines: [{}],
+    _states: [{
+      blendState: { targets: [{}] },
+      depthStencilState: {},
+      rasterizerState: {},
+    }],
+    _props: [{
+      mainColor: {
+        __type__: 'cc.Color',
+        r: color[0],
+        g: color[1],
+        b: color[2],
+        a: 255,
+      },
+      roughness,
+      metallic,
+    }],
+  };
+}
+
 function writeJson(relativePath, value) {
   const absolutePath = path.join(projectRoot, relativePath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -251,6 +324,19 @@ function writePrefab(relativePath, name, uuid, data) {
   });
 }
 
+function writeMaterial(relativePath, name, uuid, data) {
+  writeJson(relativePath, data);
+  writeJson(`${relativePath}.meta`, {
+    ver: '1.0.21',
+    importer: 'material',
+    imported: true,
+    uuid,
+    files: ['.json'],
+    subMetas: {},
+    userData: {},
+  });
+}
+
 Object.entries(DIRECTORY_METAS).forEach(([relativePath, uuid]) => {
   writeJson(relativePath, {
     ver: '1.2.0',
@@ -259,7 +345,7 @@ Object.entries(DIRECTORY_METAS).forEach(([relativePath, uuid]) => {
     uuid,
     files: [],
     subMetas: {},
-    userData: {},
+    userData: META_USER_DATA[relativePath] ?? {},
   });
 });
 
@@ -283,7 +369,7 @@ Object.entries(SCRIPT_METAS).forEach(([relativePath, uuid]) => {
     uuid,
     files: [],
     subMetas: {},
-    userData: {},
+    userData: META_USER_DATA[relativePath] ?? {},
   });
 });
 
@@ -304,6 +390,24 @@ writePrefab(
   'DragonColumn',
   UUID.dragonPrefab,
   createDragonPrefab(),
+);
+writeMaterial(
+  'assets/materials/ElasticPillarRubber.mtl',
+  'ElasticPillarRubber',
+  UUID.elasticRubberMaterial,
+  standardMaterial('ElasticPillarRubber', [132, 31, 43], 0.9),
+);
+writeMaterial(
+  'assets/materials/ElasticPillarBand.mtl',
+  'ElasticPillarBand',
+  UUID.elasticBandMaterial,
+  standardMaterial('ElasticPillarBand', [246, 119, 52], 0.78),
+);
+writePrefab(
+  'assets/resources/game/prefabs/ElasticPillar.prefab',
+  'ElasticPillar',
+  UUID.elasticPillarPrefab,
+  createElasticPillarPrefab(),
 );
 
 console.log('Generated reusable gameplay Prefabs and Cocos metadata.');

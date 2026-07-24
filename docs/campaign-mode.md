@@ -22,7 +22,8 @@ assets/resources/game/
 ├── prefabs/
 │   ├── TablePurpleRound.prefab
 │   ├── GoldCoin.prefab
-│   └── DragonColumn.prefab
+│   ├── DragonColumn.prefab
+│   └── ElasticPillar.prefab
 ├── setups/
 │   └── core_gameplay.json
 └── modes/
@@ -70,6 +71,7 @@ assets/resources/game/
 - `coins.targets` 配置所有目标硬币及其固定位置，硬币 ID 不得重复。
 - `obstacles.mode` 必须为 `fixed`。
 - `obstacles.placements` 配置每一条黑龙的位置、缩放和 Y 轴旋转，黑龙 ID 不得重复。
+- 弹性柱子的 `prefabId` 使用 `obstacle.elastic-pillar`；可选字段 `elasticBoostMultiplier` 用于覆盖默认的 `1.6` 倍增幅，允许范围为大于 `1` 且不超过 `3`。
 
 关键字段示例：
 
@@ -118,6 +120,7 @@ assets/resources/game/
 - `TablePurpleRound.prefab`：桌面模型、静态刚体和碰撞体。
 - `GoldCoin.prefab`：金币模型、动态刚体和碰撞体。
 - `DragonColumn.prefab`：黑龙模型、静态刚体和完整碰撞体。
+- `ElasticPillar.prefab`：橡胶材质的弹性柱子。硬币撞击后会按当前水平速度方向反弹并增幅，默认 `1.6` 倍；包含短暂防连弹和最高速度保护。
 
 关卡只通过 `asset_catalog.json` 中的稳定资产 ID 引用 Prefab。
 

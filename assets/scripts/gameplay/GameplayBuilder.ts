@@ -8,12 +8,18 @@ import type {
 import { parseGameplayDefinition } from './GameplayConfig';
 import { PrefabAssetLibrary, loadJsonData } from './PrefabAssetLibrary';
 
+export interface BuiltObstacle {
+    readonly node: Node;
+    readonly prefabId: string;
+    readonly elasticBoostMultiplier?: number;
+}
+
 export interface BuiltGameplay {
     readonly root: Node;
     readonly table: Node;
     readonly playerCoin: Node;
     readonly targetCoins: readonly Node[];
-    readonly obstacles: readonly Node[];
+    readonly obstacles: readonly BuiltObstacle[];
 }
 
 export async function loadGameplayDefinition(
@@ -98,7 +104,7 @@ function buildRandomObstacles(
     root: Node,
     definition: GameplayDefinition,
     library: PrefabAssetLibrary,
-): Node[] {
+): BuiltObstacle[] {
     const settings = definition.obstacles as RandomObstacleDefinition;
     const activeCount = settings.minCount
         + Math.floor(Math.random() * (settings.maxCount - settings.minCount + 1));
@@ -111,7 +117,7 @@ function buildRandomObstacles(
         clearance: definition.coins.radius + settings.coinClearance,
     }));
 
-    const obstacles: Node[] = [];
+    const obstacles: BuiltObstacle[] = [];
     for (let index = 0; index < activeCount; index++) {
         const radius = randomRange(...settings.radiusRange);
         const height = randomRange(...settings.heightRange);
@@ -133,7 +139,10 @@ function buildRandomObstacles(
         ) * 180 / Math.PI;
         obstacle.setRotationFromEuler(0, facePlayerYaw, 0);
         root.addChild(obstacle);
-        obstacles.push(obstacle);
+        obstacles.push({
+            node: obstacle,
+            prefabId: settings.prefabId,
+        });
         occupied.push({
             x: position.x,
             z: position.z,
@@ -147,7 +156,7 @@ function buildFixedObstacles(
     root: Node,
     placements: readonly FixedObstaclePlacement[],
     library: PrefabAssetLibrary,
-): Node[] {
+): BuiltObstacle[] {
     return placements.map((placement, index) => {
         const obstacle = library.instantiate(placement.prefabId);
         obstacle.name = placement.id || `Obstacle_${index + 1}`;
@@ -155,7 +164,11 @@ function buildFixedObstacles(
         obstacle.setScale(...placement.scale);
         obstacle.setRotationFromEuler(0, placement.rotationY, 0);
         root.addChild(obstacle);
-        return obstacle;
+        return {
+            node: obstacle,
+            prefabId: placement.prefabId,
+            elasticBoostMultiplier: placement.elasticBoostMultiplier,
+        };
     });
 }
 

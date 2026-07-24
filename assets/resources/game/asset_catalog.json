@@ -3,6 +3,7 @@
   "assets": {
     "table.purple-round": "game/prefabs/TablePurpleRound",
     "coin.gold": "game/prefabs/GoldCoin",
-    "obstacle.dragon-column": "game/prefabs/DragonColumn"
+    "obstacle.dragon-column": "game/prefabs/DragonColumn",
+    "obstacle.elastic-pillar": "game/prefabs/ElasticPillar"
   }
 }

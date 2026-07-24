@@ -1,5 +1,6 @@
 import {
     _decorator,
+    BlockInputEvents,
     Camera,
     Canvas,
     Color,
@@ -42,7 +43,14 @@ import {
 } from './ChargeCurveTable';
 import type { ChargeCurvePoint } from './ChargeCurveTable';
 import { buildGameplay, loadGameplayDefinition } from './gameplay/GameplayBuilder';
+import type { BuiltObstacle } from './gameplay/GameplayBuilder';
 import type { CameraDefinition, GameplayDefinition } from './gameplay/GameplayConfig';
+import {
+    calculateElasticPillarVelocity,
+    DEFAULT_ELASTIC_BOOST_MULTIPLIER,
+    ELASTIC_BOOST_COOLDOWN_SECONDS,
+    ELASTIC_PILLAR_PREFAB_ID,
+} from './gameplay/ElasticPillarPhysics';
 import { PrefabAssetLibrary } from './gameplay/PrefabAssetLibrary';
 import { GameMode, resolveGameplayContent } from './modes/GameMode';
 import {
@@ -70,6 +78,13 @@ const SHOT_MINIMUM_SECONDS = 0.12;
 const TARGET_SETTLE_SECONDS = 0.3;
 const TARGET_SETTLE_SPEED = 0.08 * WORLD_SCALE;
 const COIN_FALL_PRESENTATION_SECONDS = 0.48;
+const ELASTIC_PILLAR_MAXIMUM_SPEED = 22 * WORLD_SCALE;
+const CAMPAIGN_LEVEL_PATHS = [
+    'game/modes/campaign/levels/level_001',
+    'game/modes/campaign/levels/level_002',
+    'game/modes/campaign/levels/level_003',
+    'game/modes/campaign/levels/level_004',
+] as const;
 
 type GestureMode = 'none' | 'camera' | 'charge';
 
@@ -89,6 +104,11 @@ interface CoinBodyRuntime {
     readonly body: RigidBody;
     isFalling: boolean;
     fallElapsed: number;
+}
+
+interface ElasticPillarBinding {
+    readonly collider: CylinderCollider;
+    readonly handler: (event?: ICollisionEvent) => void;
 }
 
 /**
@@ -137,6 +157,13 @@ export class CoinFlickPrototype extends Component {
     private chargeLabel: Label | null = null;
     private campaignLivesLabel: Label | null = null;
     private campaignOutcomeLabel: Label | null = null;
+    private helpNode: Node | null = null;
+    private chargeZoneNode: Node | null = null;
+    private startOverlay: Node | null = null;
+    private resultOverlay: Node | null = null;
+    private resultTitleLabel: Label | null = null;
+    private retryButton: Node | null = null;
+    private nextLevelButton: Node | null = null;
 
     private cameraYawDegrees = 0;
     private lastDragX = 0;
@@ -148,11 +175,17 @@ export class CoinFlickPrototype extends Component {
     private materials = new Map<string, Material>();
     private obstacles: Node[] = [];
     private coinBodies: CoinBodyRuntime[] = [];
+    private elasticPillarBindings: ElasticPillarBinding[] = [];
+    private readonly elasticBoostCooldownUntil = new Map<Node, number>();
+    private elasticClockSeconds = 0;
     private campaignSession: CampaignSession | null = null;
     private campaignTargets: CampaignTargetRuntime[] = [];
     private campaignPlayerCollider: CylinderCollider | null = null;
     private campaignShotElapsed = 0;
     private readonly campaignPlayerSafePosition = new Vec3();
+    private currentCampaignLevelIndex = 0;
+    private isGameplayActive = false;
+    private isLoadingGameplay = false;
 
     protected start(): void {
         profiler.hideStats();
@@ -168,7 +201,12 @@ export class CoinFlickPrototype extends Component {
         this.bindBootstrapScene();
         this.createUserInterface();
         this.updateCameraRig();
-        void this.loadSelectedGameplay();
+        const requestedLevelIndex = this.getRequestedCampaignLevelIndex();
+        if (requestedLevelIndex === null) {
+            this.showStartOverlay();
+        } else {
+            void this.loadCampaignLevel(requestedLevelIndex);
+        }
 
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
@@ -178,6 +216,7 @@ export class CoinFlickPrototype extends Component {
 
     protected onDestroy(): void {
         this.teardownCampaignRules();
+        this.teardownElasticPillars();
         input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
         input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
@@ -192,6 +231,7 @@ export class CoinFlickPrototype extends Component {
     }
 
     protected lateUpdate(deltaTime: number): void {
+        this.elasticClockSeconds += deltaTime;
         this.updateCoinFallRotation(deltaTime);
         this.updateCampaignRules(deltaTime);
         this.updateCameraRig();
@@ -225,6 +265,8 @@ export class CoinFlickPrototype extends Component {
     }
 
     private async loadSelectedGameplay(): Promise<void> {
+        if (this.isLoadingGameplay) return;
+        this.isLoadingGameplay = true;
         try {
             const request = resolveGameplayContent(
                 this.gameMode,
@@ -242,9 +284,9 @@ export class CoinFlickPrototype extends Component {
             this.applyGameplayDefinition(definition);
             this.table = builtGameplay.table;
             this.playerCoin = builtGameplay.playerCoin;
-            this.obstacles = [...builtGameplay.obstacles];
+            this.obstacles = builtGameplay.obstacles.map((obstacle) => obstacle.node);
 
-            this.configureScenePhysics(builtGameplay.targetCoins);
+            this.configureScenePhysics(builtGameplay.targetCoins, builtGameplay.obstacles);
             this.applySceneMaterials(builtGameplay.targetCoins);
             this.configureLightingAndShadows(builtGameplay.targetCoins);
             if (request.mode === GameMode.CAMPAIGN) {
@@ -255,6 +297,8 @@ export class CoinFlickPrototype extends Component {
             } else {
                 this.teardownCampaignRules();
             }
+            this.isGameplayActive = true;
+            this.setGameplayHudVisible(true);
             this.updateCameraRig();
             console.info(
                 `[${request.modeName}] 已从 Prefab 资产库载入 ${definition.id}：${definition.displayName}`,
@@ -262,6 +306,9 @@ export class CoinFlickPrototype extends Component {
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             console.error(`[游戏模式] 内容加载失败：${message}`);
+            this.showStartOverlay();
+        } finally {
+            this.isLoadingGameplay = false;
         }
     }
 
@@ -272,7 +319,10 @@ export class CoinFlickPrototype extends Component {
         this.cameraDefinition = definition.camera;
     }
 
-    private configureScenePhysics(targetCoins: readonly Node[]): void {
+    private configureScenePhysics(
+        targetCoins: readonly Node[],
+        obstacles: readonly BuiltObstacle[],
+    ): void {
         if (!this.table || !this.playerCoin) {
             throw new Error('玩法内容构建完成后缺少桌面或玩家硬币。');
         }
@@ -285,10 +335,11 @@ export class CoinFlickPrototype extends Component {
         tableCollider.height = 2;
         tableCollider.material = this.createPhysicsMaterial(0.45, 0.05);
 
+        this.teardownElasticPillars();
         this.coinBodies = [];
         this.configureCoinPhysics(this.playerCoin);
         targetCoins.forEach((coin) => this.configureCoinPhysics(coin));
-        this.obstacles.forEach((obstacle) => this.configureObstaclePhysics(obstacle));
+        obstacles.forEach((obstacle) => this.configureObstaclePhysics(obstacle));
     }
 
     private configureCoinPhysics(coin: Node): void {
@@ -320,16 +371,77 @@ export class CoinFlickPrototype extends Component {
         });
     }
 
-    private configureObstaclePhysics(obstacle: Node): void {
-        const body = obstacle.getComponent(RigidBody) ?? obstacle.addComponent(RigidBody);
+    private configureObstaclePhysics(obstacle: BuiltObstacle): void {
+        const body = obstacle.node.getComponent(RigidBody) ?? obstacle.node.addComponent(RigidBody);
         body.type = ERigidBodyType.STATIC;
         body.useGravity = false;
 
-        const collider = obstacle.getComponent(CylinderCollider) ?? obstacle.addComponent(CylinderCollider);
+        const collider = obstacle.node.getComponent(CylinderCollider)
+            ?? obstacle.node.addComponent(CylinderCollider);
         collider.center = Vec3.ZERO;
         collider.radius = 0.5;
         collider.height = 2;
-        collider.material = this.createPhysicsMaterial(0.2, 0.78);
+        if (obstacle.prefabId === ELASTIC_PILLAR_PREFAB_ID) {
+            collider.material = this.createPhysicsMaterial(0.08, 0.96);
+            this.bindElasticPillar(
+                obstacle.node,
+                collider,
+                obstacle.elasticBoostMultiplier ?? DEFAULT_ELASTIC_BOOST_MULTIPLIER,
+            );
+        } else {
+            collider.material = this.createPhysicsMaterial(0.2, 0.78);
+        }
+    }
+
+    private bindElasticPillar(
+        pillar: Node,
+        collider: CylinderCollider,
+        multiplier: number,
+    ): void {
+        const handler = (event?: ICollisionEvent): void => {
+            const coin = event
+                ? this.coinBodies.find((item) => item.node === event.otherCollider.node)
+                : undefined;
+            if (!coin || coin.isFalling) return;
+
+            const cooldownUntil = this.elasticBoostCooldownUntil.get(coin.node) ?? 0;
+            if (this.elasticClockSeconds < cooldownUntil) return;
+            this.elasticBoostCooldownUntil.set(
+                coin.node,
+                this.elasticClockSeconds + ELASTIC_BOOST_COOLDOWN_SECONDS,
+            );
+
+            this.scheduleOnce(() => {
+                if (!coin.node.isValid || coin.isFalling) return;
+                const currentVelocity = new Vec3();
+                coin.body.getLinearVelocity(currentVelocity);
+                const coinPosition = coin.node.worldPosition;
+                const pillarPosition = pillar.worldPosition;
+                const boosted = calculateElasticPillarVelocity(
+                    currentVelocity,
+                    {
+                        x: coinPosition.x - pillarPosition.x,
+                        z: coinPosition.z - pillarPosition.z,
+                    },
+                    multiplier,
+                    ELASTIC_PILLAR_MAXIMUM_SPEED,
+                );
+                coin.body.setLinearVelocity(new Vec3(boosted.x, boosted.y, boosted.z));
+                coin.body.wakeUp();
+            }, 0);
+        };
+
+        collider.on('onCollisionEnter', handler);
+        this.elasticPillarBindings.push({ collider, handler });
+    }
+
+    private teardownElasticPillars(): void {
+        this.elasticPillarBindings.forEach(({ collider, handler }) => {
+            if (collider.isValid) collider.off('onCollisionEnter', handler);
+        });
+        this.elasticPillarBindings = [];
+        this.elasticBoostCooldownUntil.clear();
+        this.elasticClockSeconds = 0;
     }
 
     private updateCoinFallRotation(deltaTime: number): void {
@@ -474,6 +586,7 @@ export class CoinFlickPrototype extends Component {
         helpLabel.color = new Color(235, 240, 242, 230);
         helpLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
         helpLabel.verticalAlign = VerticalTextAlignment.CENTER;
+        this.helpNode = helpNode;
 
         const livesNode = new Node('CampaignLives');
         livesNode.layer = uiLayer;
@@ -507,6 +620,7 @@ export class CoinFlickPrototype extends Component {
         canvasNode.addChild(zoneNode);
         zoneNode.addComponent(UITransform).setContentSize(zoneDiameter, zoneDiameter);
         this.chargeGraphics = zoneNode.addComponent(Graphics);
+        this.chargeZoneNode = zoneNode;
 
         const labelNode = new Node('ChargeLabel');
         labelNode.layer = uiLayer;
@@ -519,10 +633,230 @@ export class CoinFlickPrototype extends Component {
         this.chargeLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
         this.chargeLabel.verticalAlign = VerticalTextAlignment.CENTER;
 
+        this.createFlowOverlays(canvasNode, visibleSize.width, visibleSize.height);
+        this.setGameplayHudVisible(false);
+        this.redrawChargeZone();
+    }
+
+    private createFlowOverlays(canvasNode: Node, width: number, height: number): void {
+        this.startOverlay = this.createOverlay(
+            canvasNode,
+            'StartOverlay',
+            width,
+            height,
+            new Color(64, 92, 142, 255),
+        );
+        this.createButton(
+            this.startOverlay,
+            'CampaignButton',
+            '闯关模式',
+            0,
+            0,
+            320,
+            104,
+            new Color(255, 190, 64, 255),
+            () => this.startCampaign(),
+        );
+
+        this.resultOverlay = this.createOverlay(
+            canvasNode,
+            'ResultOverlay',
+            width,
+            height,
+            new Color(19, 25, 38, 220),
+        );
+
+        const titleNode = new Node('ResultTitle');
+        titleNode.layer = Layers.Enum.UI_2D;
+        titleNode.setPosition(0, 120, 0);
+        this.resultOverlay.addChild(titleNode);
+        titleNode.addComponent(UITransform).setContentSize(width - 64, 80);
+        this.resultTitleLabel = titleNode.addComponent(Label);
+        this.resultTitleLabel.fontSize = 52;
+        this.resultTitleLabel.lineHeight = 64;
+        this.resultTitleLabel.color = new Color(255, 255, 255, 255);
+        this.resultTitleLabel.horizontalAlign = HorizontalTextAlignment.CENTER;
+        this.resultTitleLabel.verticalAlign = VerticalTextAlignment.CENTER;
+
+        this.retryButton = this.createButton(
+            this.resultOverlay,
+            'RetryButton',
+            '再来一次',
+            0,
+            -12,
+            300,
+            92,
+            new Color(91, 167, 255, 255),
+            () => this.restartCurrentLevel(),
+        );
+        this.nextLevelButton = this.createButton(
+            this.resultOverlay,
+            'NextLevelButton',
+            '下一关',
+            0,
+            -126,
+            300,
+            92,
+            new Color(255, 190, 64, 255),
+            () => this.loadNextLevel(),
+        );
+        this.resultOverlay.active = false;
+    }
+
+    private createOverlay(
+        parent: Node,
+        name: string,
+        width: number,
+        height: number,
+        color: Color,
+    ): Node {
+        const overlay = new Node(name);
+        overlay.layer = Layers.Enum.UI_2D;
+        parent.addChild(overlay);
+        overlay.addComponent(UITransform).setContentSize(width, height);
+        overlay.addComponent(BlockInputEvents);
+        const graphics = overlay.addComponent(Graphics);
+        graphics.fillColor = color;
+        graphics.rect(-width * 0.5, -height * 0.5, width, height);
+        graphics.fill();
+        return overlay;
+    }
+
+    private createButton(
+        parent: Node,
+        name: string,
+        text: string,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        color: Color,
+        onClick: () => void,
+    ): Node {
+        const button = new Node(name);
+        button.layer = Layers.Enum.UI_2D;
+        button.setPosition(x, y, 0);
+        parent.addChild(button);
+        button.addComponent(UITransform).setContentSize(width, height);
+
+        const graphics = button.addComponent(Graphics);
+        graphics.fillColor = color;
+        graphics.roundRect(-width * 0.5, -height * 0.5, width, height, 22);
+        graphics.fill();
+        graphics.lineWidth = 4;
+        graphics.strokeColor = new Color(255, 255, 255, 210);
+        graphics.roundRect(-width * 0.5, -height * 0.5, width, height, 22);
+        graphics.stroke();
+
+        const labelNode = new Node(`${name}Label`);
+        labelNode.layer = Layers.Enum.UI_2D;
+        button.addChild(labelNode);
+        labelNode.addComponent(UITransform).setContentSize(width - 24, height - 16);
+        const label = labelNode.addComponent(Label);
+        label.string = text;
+        label.fontSize = 36;
+        label.lineHeight = 44;
+        label.color = new Color(255, 255, 255, 255);
+        label.horizontalAlign = HorizontalTextAlignment.CENTER;
+        label.verticalAlign = VerticalTextAlignment.CENTER;
+
+        button.on(Node.EventType.TOUCH_END, onClick, this);
+        return button;
+    }
+
+    private showStartOverlay(): void {
+        this.gameMode = GameMode.CAMPAIGN;
+        this.currentCampaignLevelIndex = 0;
+        this.campaignLevelResourcePath = CAMPAIGN_LEVEL_PATHS[0];
+        this.isGameplayActive = false;
+        this.setGameplayHudVisible(false);
+        if (this.resultOverlay) this.resultOverlay.active = false;
+        if (this.startOverlay) this.startOverlay.active = true;
+    }
+
+    private getRequestedCampaignLevelIndex(): number | null {
+        if (typeof window === 'undefined') return null;
+
+        const requestedLevel = new URLSearchParams(window.location.search).get('level');
+        if (!requestedLevel) return null;
+
+        const levelNumber = Number.parseInt(requestedLevel, 10);
+        if (
+            !/^\d{1,3}$/.test(requestedLevel)
+            || !Number.isInteger(levelNumber)
+            || levelNumber < 1
+            || levelNumber > CAMPAIGN_LEVEL_PATHS.length
+        ) {
+            console.warn(
+                `[闯关模式] 无效的 level 参数 "${requestedLevel}"，显示模式入口。`,
+            );
+            return null;
+        }
+        return levelNumber - 1;
+    }
+
+    private startCampaign(): void {
+        if (this.isLoadingGameplay) return;
+        this.currentCampaignLevelIndex = 0;
+        void this.loadCampaignLevel(this.currentCampaignLevelIndex);
+    }
+
+    private async loadCampaignLevel(index: number): Promise<void> {
+        if (this.isLoadingGameplay || index < 0 || index >= CAMPAIGN_LEVEL_PATHS.length) return;
+        this.currentCampaignLevelIndex = index;
+        this.gameMode = GameMode.CAMPAIGN;
+        this.campaignLevelResourcePath = CAMPAIGN_LEVEL_PATHS[index];
+        this.isGameplayActive = false;
+        this.cameraYawDegrees = 0;
+        this.lastDragX = 0;
+        this.cancelCurrentGesture();
+        this.setGameplayHudVisible(false);
+        if (this.startOverlay) this.startOverlay.active = false;
+        if (this.resultOverlay) this.resultOverlay.active = false;
+        await this.loadSelectedGameplay();
+    }
+
+    private restartCurrentLevel(): void {
+        void this.loadCampaignLevel(this.currentCampaignLevelIndex);
+    }
+
+    private loadNextLevel(): void {
+        void this.loadCampaignLevel(this.currentCampaignLevelIndex + 1);
+    }
+
+    private showResultOverlay(outcome: CampaignOutcome): void {
+        this.isGameplayActive = false;
+        this.cancelCurrentGesture();
+        if (!this.resultOverlay || !this.resultTitleLabel || !this.nextLevelButton) return;
+
+        const isSuccess = outcome === 'succeeded';
+        const isLastLevel = this.currentCampaignLevelIndex >= CAMPAIGN_LEVEL_PATHS.length - 1;
+        this.resultTitleLabel.string = isSuccess
+            ? isLastLevel ? '全部通关' : '闯关成功'
+            : '闯关失败';
+        this.resultTitleLabel.color = isSuccess
+            ? new Color(255, 224, 92, 255)
+            : new Color(255, 132, 120, 255);
+        this.nextLevelButton.active = isSuccess && !isLastLevel;
+        this.resultOverlay.active = true;
+    }
+
+    private setGameplayHudVisible(visible: boolean): void {
+        if (this.helpNode) this.helpNode.active = visible;
+        if (this.chargeZoneNode) this.chargeZoneNode.active = visible;
+        if (this.campaignLivesLabel) this.campaignLivesLabel.node.active = visible;
+        if (this.campaignOutcomeLabel) this.campaignOutcomeLabel.node.active = visible;
+    }
+
+    private cancelCurrentGesture(): void {
+        this.gestureMode = 'none';
+        this.isCharging = false;
+        this.chargeSeconds = 0;
         this.redrawChargeZone();
     }
 
     private onTouchStart(event: EventTouch): void {
+        if (!this.isGameplayActive) return;
         if (this.gestureMode !== 'none') return;
 
         const location = event.getLocation();
@@ -544,6 +878,7 @@ export class CoinFlickPrototype extends Component {
     }
 
     private onTouchMove(event: EventTouch): void {
+        if (!this.isGameplayActive) return;
         if (this.gestureMode !== 'camera') return;
 
         const currentX = event.getLocation().x;
@@ -555,6 +890,7 @@ export class CoinFlickPrototype extends Component {
     }
 
     private onTouchEnd(): void {
+        if (!this.isGameplayActive) return;
         if (this.gestureMode === 'charge' && this.isCharging) {
             this.launchPlayerCoin();
         }
@@ -1014,7 +1350,8 @@ export class CoinFlickPrototype extends Component {
                 this.campaignOutcomeLabel.string = '本关失败';
                 this.campaignOutcomeLabel.color = new Color(255, 112, 98, 255);
             }
-            console.info('[闯关模式] 本关失败；失败界面 UI 等待后续接入。');
+            this.showResultOverlay(outcome);
+            console.info('[闯关模式] 本关失败，显示重新挑战界面。');
             return;
         }
         if (outcome === 'succeeded') {
@@ -1022,6 +1359,7 @@ export class CoinFlickPrototype extends Component {
                 this.campaignOutcomeLabel.string = '闯关成功';
                 this.campaignOutcomeLabel.color = new Color(255, 224, 92, 255);
             }
+            this.showResultOverlay(outcome);
             console.info('[闯关模式] 所有目标均已消失，本关成功。');
         }
     }

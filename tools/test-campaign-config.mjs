@@ -58,11 +58,12 @@ const validLevel = {
   obstacles: {
     mode: 'fixed',
     placements: [{
-      id: 'dragon-01',
-      prefabId: 'dragon-column',
+      id: 'elastic-01',
+      prefabId: 'obstacle.elastic-pillar',
       position: [0, 0.25, 0],
       scale: [5, 5, 5],
       rotationY: 0,
+      elasticBoostMultiplier: 1.8,
     }],
   },
 };
@@ -70,6 +71,7 @@ const validLevel = {
 const parsed = campaignConfig.parseCampaignLevelDefinition(validLevel);
 assert.equal(parsed.startingLives, 3);
 assert.equal(parsed.obstacles.mode, 'fixed');
+assert.equal(parsed.obstacles.placements[0].elasticBoostMultiplier, 1.8);
 
 const level001 = JSON.parse(fs.readFileSync(
   path.join(
@@ -232,6 +234,32 @@ assert.deepEqual(
   ],
 );
 
+assert.throws(
+  () => campaignConfig.parseCampaignLevelDefinition({
+    ...validLevel,
+    obstacles: {
+      mode: 'fixed',
+      placements: [{
+        ...validLevel.obstacles.placements[0],
+        elasticBoostMultiplier: 1,
+      }],
+    },
+  }),
+  /elasticBoostMultiplier/,
+);
+assert.throws(
+  () => campaignConfig.parseCampaignLevelDefinition({
+    ...validLevel,
+    obstacles: {
+      mode: 'fixed',
+      placements: [{
+        ...validLevel.obstacles.placements[0],
+        elasticBoostMultiplier: 3.1,
+      }],
+    },
+  }),
+  /elasticBoostMultiplier/,
+);
 assert.throws(
   () => campaignConfig.parseCampaignLevelDefinition({
     ...validLevel,

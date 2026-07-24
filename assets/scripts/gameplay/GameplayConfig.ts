@@ -46,6 +46,7 @@ export interface FixedObstaclePlacement {
     readonly position: Vec3Tuple;
     readonly scale: Vec3Tuple;
     readonly rotationY: number;
+    readonly elasticBoostMultiplier?: number;
 }
 
 export interface FixedObstacleDefinition {
@@ -195,12 +196,25 @@ function parseObstacles(value: unknown): ObstacleDefinition {
                     position: requireVec3(item.position, `obstacles.placements[${index}].position`),
                     scale: requirePositiveVec3(item.scale, `obstacles.placements[${index}].scale`),
                     rotationY: requireNumber(item.rotationY, `obstacles.placements[${index}].rotationY`),
+                    elasticBoostMultiplier: parseElasticBoostMultiplier(
+                        item.elasticBoostMultiplier,
+                        `obstacles.placements[${index}].elasticBoostMultiplier`,
+                    ),
                 };
             }),
         };
     }
 
     throw new Error('obstacles.mode 只允许 random 或 fixed。');
+}
+
+function parseElasticBoostMultiplier(value: unknown, path: string): number | undefined {
+    if (value === undefined) return undefined;
+    const multiplier = requireNumber(value, path);
+    if (multiplier <= 1 || multiplier > 3) {
+        throw new Error(`${path} 必须大于 1 且不超过 3。`);
+    }
+    return multiplier;
 }
 
 function requireSchemaVersion(value: Record<string, unknown>): void {
